@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/step_trace.schema.json",
+  "title": "StepTrace",
+  "description": "One CUA step. Spec §8.",
+  "type": "object",
+  "required": [
+    "step_id",
+    "step_index",
+    "step_type",
+    "status",
+    "started_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "step_id": {
+      "type": "string",
+      "description": "Globally unique step id. Convention: `<run_id>/step/<zero-padded-index>`."
+    },
+    "step_index": {"type": "integer", "minimum": 0},
+    "intent": {"type": "string"},
+    "step_type": {
+      "type": "string",
+      "description": "Action family. Open string so adapters can extend.",
+      "examples": ["click", "type", "key", "scroll", "wait", "navigate", "verify", "plan"]
+    },
+    "required": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this step is required for run success."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "succeeded", "failed", "skipped", "recovered"]
+    },
+    "failure_class": {"$ref": "failure_class.schema.json"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "ended_at": {"type": ["string", "null"], "format": "date-time"},
+    "duration_ms": {"type": ["integer", "null"], "minimum": 0},
+    "observation_pre": {
+      "type": ["string", "null"],
+      "description": "Bundle-relative path to the pre-action observation artifact (PNG). Or null if not captured."
+    },
+    "observation_post": {
+      "type": ["string", "null"],
+      "description": "Bundle-relative path to the post-action observation artifact (PNG). Or null if not captured."
+    },
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string"},
+        "params": {"type": "object", "additionalProperties": true},
+        "coordinate_space": {"$ref": "coordinate_space.schema.json"},
+        "dispatch_backend": {
+          "type": "string",
+          "description": "Adapter-specific dispatch backend identifier (e.g. cdp, cdp_som, playwright, pyautogui)."
+        }
+      }
+    },
+    "grounding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "provenance"],
+      "properties": {
+        "provider": {"type": "string"},
+        "target_label": {"type": "string"},
+        "coordinates": {
+          "type": "object",
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "properties": {
+            "x": {"type": "number"},
+            "y": {"type": "number"}
+          }
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "evidence": {"type": "string"},
+        "provenance": {"$ref": "provenance.schema.json"}
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "recoverable", "skipped", "unknown"]
+        },
+        "reason": {"type": "string"},
+        "evidence_refs": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "recovery_decision": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["retry", "alternate_grounding", "skip", "halt", "replan", "human_handoff", "none"]
+        },
+        "reason": {"type": "string"},
+        "attempt": {"type": "integer", "minimum": 1}
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "Bundle-relative paths to decision-event JSONL files for this step.",
+      "items": {"type": "string"}
+    },
+    "logs": {
+      "type": "array",
+      "description": "Bundle-relative log references. May include `#L<line>` or `#L<start>-L<end>` anchors.",
+      "items": {"type": "string"}
+    }
+  }
+}

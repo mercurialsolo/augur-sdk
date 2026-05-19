@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/decision_event.schema.json",
+  "title": "DecisionEvent",
+  "description": "An ordered record from planner, verifier, recovery, routing, or dispatch layers (spec §8). Stored one-per-line in JSONL files under events/.",
+  "type": "object",
+  "required": ["ts", "layer", "kind", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp."
+    },
+    "step_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional — events MAY be associated with a step or stand alone."
+    },
+    "layer": {
+      "type": "string",
+      "enum": [
+        "planner",
+        "grounding",
+        "model",
+        "dispatch",
+        "verifier",
+        "step_recovery",
+        "routing",
+        "runner",
+        "adapter"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["decision", "observation", "error", "info", "metric"]
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-line human summary. The detail object carries the structured payload."
+    },
+    "detail": {
+      "type": "object",
+      "description": "Layer-specific structured payload. Schema is intentionally open here; adapters MAY define their own shapes.",
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/debug_session.schema.json",
+  "title": "DebugSession",
+  "description": "One CUA run from the debugger's point of view. Spec §8.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "debug_session_id",
+    "run_id",
+    "client",
+    "capture_mode",
+    "started_at",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Augur schema version that this record conforms to. See docs/versioning.md.",
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    },
+    "debug_session_id": {
+      "type": "string",
+      "pattern": "^dbg_[A-Za-z0-9_\\-]+$"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Adapter-supplied run id. Often `run_<uuid>` but the format is not enforced."
+    },
+    "client": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string", "description": "Adapter name, e.g. `mantis`."},
+        "version": {"type": "string"},
+        "git_sha": {"type": "string"}
+      }
+    },
+    "capture_mode": {"$ref": "capture_mode.schema.json"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "ended_at": {"type": ["string", "null"], "format": "date-time"},
+    "status": {
+      "type": "string",
+      "enum": ["running", "succeeded", "failed", "cancelled", "halted"]
+    },
+    "artifact_root": {
+      "type": "string",
+      "description": "URI to the artifact root. file:// for local bundles, s3:// or https:// otherwise."
+    },
+    "trace_uri": {"type": "string"},
+    "live": {
+      "type": ["object", "null"],
+      "description": "Live attach endpoints. Only populated while the run is active (spec §7, Phase 4).",
+      "additionalProperties": false,
+      "properties": {
+        "status_url": {"type": "string"},
+        "video_url": {"type": "string"},
+        "reasoning_url": {"type": "string"}
+      }
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "description": "Free-form key/value tags (tenant, environment, plan signature, etc.)."
+    }
+  }
+}

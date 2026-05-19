@@ -1,0 +1,62 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write   # OIDC for trusted publisher (no secret needed)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.8.x"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dev deps
+        run: uv sync --frozen --no-install-project
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Typecheck
+        run: uv run mypy -p augur_sdk
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/augur-sdk/
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # Uses PyPI Trusted Publishers (OIDC). Set up at
+      # https://pypi.org/manage/account/publishing/ — no API token needed.
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

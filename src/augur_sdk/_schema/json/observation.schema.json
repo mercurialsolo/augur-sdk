@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/observation.schema.json",
+  "title": "Observation",
+  "description": "A captured screenshot with enough metadata to render overlays correctly (spec §8).",
+  "type": "object",
+  "required": [
+    "artifact",
+    "media_type",
+    "width",
+    "height",
+    "coordinate_space"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "artifact": {
+      "type": "string",
+      "description": "Bundle-relative path or signed URI to the image."
+    },
+    "media_type": {
+      "type": "string",
+      "enum": ["image/png", "image/jpeg", "image/webp"]
+    },
+    "width": {"type": "integer", "minimum": 1},
+    "height": {"type": "integer", "minimum": 1},
+    "coordinate_space": {"$ref": "coordinate_space.schema.json"},
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "device_scale_factor": {"type": "number", "minimum": 0, "default": 1}
+      }
+    },
+    "url": {"type": "string"},
+    "title": {"type": "string"},
+    "scroll": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": {"type": "integer"},
+        "y": {"type": "integer"}
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "phash_64": {
+          "type": "string",
+          "description": "64-bit perceptual hash, hex-encoded."
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied"],
+      "properties": {
+        "applied": {"type": "boolean"},
+        "policy_id": {"type": "string"},
+        "regions": {
+          "type": "array",
+          "description": "Optional list of regions that were masked.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x1", "y1", "x2", "y2"],
+            "properties": {
+              "x1": {"type": "integer"},
+              "y1": {"type": "integer"},
+              "x2": {"type": "integer"},
+              "y2": {"type": "integer"},
+              "label": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "missing": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this observation is a placeholder for a frame that was not captured (e.g. late attach). The `artifact` MUST still be present but the consumer MUST NOT render a screenshot."
+    }
+  }
+}

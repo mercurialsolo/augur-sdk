@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/diagnostic_finding.schema.json",
+  "title": "DiagnosticFinding",
+  "description": "One output of the diagnostic rules engine. Spec §15.",
+  "type": "object",
+  "required": ["rule_id", "severity", "summary", "evidence"],
+  "additionalProperties": false,
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "description": "Stable rule identifier. Generic rules use `cua.*`; adapter packs MUST namespace under `<adapter>.*`.",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "summary": {"type": "string"},
+    "recommendation": {"type": "string"},
+    "step_index": {"type": "integer", "minimum": 0},
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "At least one evidence reference. Each MUST point at a bundle-relative path. Optional `#L<n>` or `#L<a>-L<b>` anchors are honored for log refs.",
+      "items": {
+        "type": "object",
+        "required": ["type", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["log", "step", "event", "screenshot", "diff", "crop", "trace"]
+          },
+          "ref": {"type": "string"}
+        }
+      }
+    }
+  }
+}

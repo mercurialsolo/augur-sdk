@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/coordinate_space.schema.json",
+  "title": "CoordinateSpace",
+  "description": "Coordinate space registry (spec §4, §9, issue #9). Every coordinate MUST be tagged with one of these spaces so viewers can render overlays correctly across viewport sizes and device pixel ratios.",
+  "type": "string",
+  "enum": [
+    "viewport_css_px",
+    "device_px",
+    "screenshot_px",
+    "dom_client_rect"
+  ],
+  "x-conversions": {
+    "note": "Conversion rules are non-normative here. See packages/sdk-python/src/augur_sdk/coordinates.py for the reference impl.",
+    "viewport_css_px<->device_px": "multiply by device_scale_factor on the source observation",
+    "viewport_css_px<->screenshot_px": "screenshots are captured at viewport scale by default; otherwise multiply by screenshot_scale",
+    "dom_client_rect": "Diagnostic-only space. MUST be paired with provenance=dom. Never a runtime input (spec §4)."
+  }
+}

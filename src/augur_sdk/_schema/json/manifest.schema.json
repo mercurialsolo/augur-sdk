@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/manifest.schema.json",
+  "title": "BundleManifest",
+  "description": "Envelope for an Augur debug bundle. Spec §11. Lives at `manifest.json` at the bundle root.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bundle_format",
+    "run_id",
+    "debug_session_id",
+    "client",
+    "capture_mode",
+    "created_at",
+    "trace",
+    "step_count",
+    "paths"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$",
+      "description": "Augur schema version that every record in this bundle conforms to."
+    },
+    "bundle_format": {
+      "type": "string",
+      "const": "augur-bundle",
+      "description": "Constant discriminator so consumers can sniff Augur bundles without parsing the rest."
+    },
+    "run_id": {"type": "string"},
+    "debug_session_id": {
+      "type": "string",
+      "pattern": "^dbg_[A-Za-z0-9_\\-]+$"
+    },
+    "client": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"},
+        "git_sha": {"type": "string"}
+      }
+    },
+    "capture_mode": {"$ref": "capture_mode.schema.json"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id"],
+      "properties": {
+        "policy_id": {"type": "string"},
+        "applied": {"type": "boolean", "default": true}
+      }
+    },
+    "trace": {
+      "type": "string",
+      "description": "Bundle-relative path to the trace document (see trace.schema.json).",
+      "const": "trace.json"
+    },
+    "step_count": {"type": "integer", "minimum": 0},
+    "paths": {
+      "type": "object",
+      "description": "Path-stability map. Producers MUST emit exactly these top-level paths so consumers can rely on them.",
+      "additionalProperties": false,
+      "required": ["steps", "screenshots", "events", "logs"],
+      "properties": {
+        "steps": {"type": "string", "const": "steps/"},
+        "screenshots": {"type": "string", "const": "screenshots/"},
+        "crops": {"type": "string", "const": "crops/"},
+        "diffs": {"type": "string", "const": "diffs/"},
+        "events": {"type": "string", "const": "events/"},
+        "logs": {"type": "string", "const": "logs/"},
+        "replay": {"type": "string", "const": "replay/"},
+        "diagnostics": {"type": "string", "const": "diagnostics/"},
+        "schema": {"type": "string", "const": "schema/"},
+        "agent": {"type": "string", "const": "AGENT.md"}
+      }
+    },
+    "signatures": {
+      "type": "object",
+      "description": "Optional content hashes for integrity. Keys are bundle-relative file paths; values are sha256 hex digests.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "missing": {
+      "type": "array",
+      "description": "Bundle-relative paths that are explicitly absent (e.g. screenshots before late-attach point). Consumers MUST treat anything not listed and not present as a producer bug.",
+      "items": {"type": "string"}
+    }
+  }
+}
