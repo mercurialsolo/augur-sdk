@@ -5,9 +5,13 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 
 Instrument any **screenshot-grounded computer-use agent** (CUA) with one
-context manager. Streams traces to an [Augur](https://github.com/mercurialsolo/augur)
-server (Sentry-style DSN) AND writes a path-stable bundle to disk —
-both work, both at once, no extra glue.
+context manager. Streams traces to **Augur** (a hosted cloud service for
+CUA observability) over a Sentry-style DSN AND writes a path-stable
+bundle to disk — both work, both at once, no extra glue.
+
+> This is the **public client SDK**. The Augur server, viewer, and CLI
+> are a managed cloud service — sign up at augur (URL TBD) to get a DSN.
+> The SDK also works standalone in local-bundle mode with no account.
 
 ```python
 from augur_sdk import CaptureMode, DebugSession
@@ -65,11 +69,11 @@ uv pip install -e .
 - Python ≥ 3.11
 - `jsonschema`, `referencing`, `urllib3` (installed automatically)
 
-The SDK is **zero-monorepo**: JSON Schemas are vendored inside the package
-(`augur_sdk._schema`), so `import augur_sdk` doesn't require any sibling
-Augur packages. The Augur server, viewer, and CLI live in the main
-[`mercurialsolo/augur`](https://github.com/mercurialsolo/augur) repo — you
-only need this package on the **client side** (your CUA runtime).
+The SDK is self-contained: JSON Schemas are vendored inside the package
+(`augur_sdk._schema`), so `import augur_sdk` requires no other Augur
+components. The Augur server, viewer, and CLI are operated as a hosted
+service — you only need this package on the **client side** (your CUA
+runtime).
 
 ## Quickstart — three modes
 
@@ -119,8 +123,8 @@ augur admin dsn-issue --tenant <your-tenant> --label <client-name>
 ### 3. Adapter pattern (existing CUA exports)
 
 Already have a trace exporter (Mantis-style)? Write a small adapter that
-maps your shape to Augur records. See the upstream
-[adapter authoring guide](https://github.com/mercurialsolo/augur/blob/main/docs/adapter-authoring.md).
+maps your shape to Augur records. See the
+[adapter authoring guide](docs/reference/adapter-authoring.md).
 
 ## What gets written
 
@@ -140,8 +144,8 @@ out_dir/
 ```
 
 The same bundle drives the viewer, the CLI, and any coding agent. See
-[`docs/bundle-layout.md`](https://github.com/mercurialsolo/augur/blob/main/docs/bundle-layout.md)
-upstream for the full normative spec.
+[`docs/concepts/bundle-layout.md`](docs/concepts/bundle-layout.md) for
+the full normative spec.
 
 ## Capture modes
 
@@ -271,15 +275,14 @@ uv publish            # uses ~/.pypirc or UV_PUBLISH_TOKEN
 
 ## Where Augur lives
 
-This is the **client-side SDK only**. The Augur server, viewer, CLI,
-diagnostic rule packs, and Mantis adapter live in the umbrella repo:
+Augur (server, viewer, CLI, diagnostic rule packs, Mantis adapter) is a
+**hosted cloud service** — not open source. This SDK is the only
+component your CUA runtime needs; everything else is operated for you.
 
-- **Main Augur repo**: https://github.com/mercurialsolo/augur
-- **Issues, schemas, docs**: same repo, `docs/` and the GitHub issue tracker
-- **Mantis adapter**: `packages/adapters/mantis/` upstream
-
-The SDK is the only piece your CUA runtime actually needs. The rest is
-operator-side.
+- **Get a DSN / sign up**: contact your Augur workspace admin, or reach
+  out at the project email below.
+- **Issues for this SDK**: https://github.com/mercurialsolo/augur-sdk/issues
+- **Schemas**: vendored under `src/augur_sdk/_schema/json/` in this repo.
 
 ## License
 

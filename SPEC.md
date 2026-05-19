@@ -11,9 +11,9 @@ the source.
 This document uses RFC-2119 keywords (`MUST`, `SHOULD`, `MAY`).
 
 The umbrella product spec (architecture, the full debugger surface,
-non-goals) is upstream at
-https://github.com/mercurialsolo/augur/blob/main/SPEC.md — this file is
-the **SDK-only slice** of that.
+non-goals) is maintained alongside the hosted Augur service and is not
+publicly mirrored. This file is the **SDK-only slice** — the contract
+the public client exposes.
 
 ---
 

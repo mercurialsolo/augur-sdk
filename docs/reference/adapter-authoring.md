@@ -72,9 +72,8 @@ Every adapter MUST:
    `device_px`, `screenshot_px`, or `dom_client_rect`. The validator
    rejects anything else.
 3. **Map failure classes.** Free-form framework failure strings get
-   canonicalised — see the upstream
-   [failure-class-taxonomy](https://github.com/mercurialsolo/augur/blob/main/docs/failure-class-taxonomy.md)
-   for the full vocabulary.
+   canonicalised against the vocabulary fixed by
+   `src/augur_sdk/_schema/json/failure_class.schema.json`.
 4. **Produce a bundle that passes `validate_bundle()`.** The schemas are
    vendored at `augur_sdk._schema/json/`; the SDK runs them on every
    write.
@@ -116,9 +115,10 @@ adapter rules combined.
 
 ## Reference adapter
 
-Mantis is the canonical example. It lives in the umbrella repo at
-[`packages/adapters/mantis/`](https://github.com/mercurialsolo/augur/tree/main/packages/adapters/mantis)
-and demonstrates:
+Mantis is the canonical example. The adapter is maintained alongside
+the hosted Augur service (not currently open source); the
+[Mantis runtime itself](https://github.com/mercurialsolo/mantis) is
+public. The adapter demonstrates:
 
 - Reading on-disk Mantis `TraceExporter` files (epoch timestamps,
   POST-only screenshots, free-form `data` failure strings).

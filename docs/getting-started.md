@@ -7,12 +7,12 @@ Send your first Augur trace in **5 minutes**.
 - Python ≥ 3.11
 - A computer-use agent (CUA) you can edit, even minimally
 - Either:
-  - Access to an Augur server (someone runs `augur serve`), **or**
-  - A local checkout — bundles still write to disk
+  - An Augur workspace DSN (Augur is a hosted service — ask your
+    workspace admin for one), **or**
+  - Nothing — bundles still write to disk in local-only mode.
 
-If you don't have an Augur server yet, see
-[Run an Augur server](https://github.com/mercurialsolo/augur/blob/main/docs/server.md)
-upstream. You can finish this guide without one (local-only mode).
+You can finish this guide without a DSN. Streaming activates the moment
+`AUGUR_DSN` is set.
 
 ## 1. Install
 
