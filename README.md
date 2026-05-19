@@ -223,29 +223,50 @@ uv run mypy -p augur_sdk  # types
 
 ## Publish to PyPI
 
-The package is set up to publish via standard tooling. To cut a release:
+Releases are tag-driven and run through `.github/workflows/release.yml`,
+which authenticates to PyPI via **OIDC Trusted Publishing** — no API
+token is stored anywhere.
+
+### One-time setup
+
+1. Register the project on PyPI as a pending publisher:
+   https://pypi.org/manage/account/publishing/
+   - PyPI project name: `augur-sdk`
+   - Owner: `mercurialsolo`
+   - Repository: `augur-sdk`
+   - Workflow name: `release.yml`
+   - Environment name: `pypi`
+2. (Optional) Pre-create the `pypi` GitHub Environment if you want to
+   gate releases behind required reviewers:
+
+   ```bash
+   gh api -X PUT /repos/mercurialsolo/augur-sdk/environments/pypi
+   ```
+
+### Cut a release
+
+1. Bump `__version__` in `src/augur_sdk/_version.py` and `version` in
+   `pyproject.toml`.
+2. Move the `[Unreleased]` block in `CHANGELOG.md` under the new version.
+3. Commit, tag, push:
+
+   ```bash
+   git commit -am "Release v0.1.0"
+   git tag v0.1.0 -m "Initial release"
+   git push origin main v0.1.0
+   ```
+
+The tag push triggers `release.yml`: lint → typecheck → test → `uv build`
+→ publish to PyPI via OIDC. The wheel + sdist are also uploaded as
+workflow artefacts.
+
+### Local build / manual upload (escape hatch)
+
+If you need to publish outside CI (don't, normally):
 
 ```bash
-# 1. Bump version in src/augur_sdk/_version.py and pyproject.toml
-# 2. Update CHANGELOG.md
-# 3. Build sdist + wheel
-uv build
-# 4. Upload (requires PYPI_API_TOKEN)
-uv publish
-# or:
-pip install twine
-twine upload dist/*
-```
-
-To enable **automated** publish on git tag:
-
-1. Add `PYPI_API_TOKEN` to your GitHub repo secrets.
-2. Push a tag matching `v*` (e.g. `v0.1.0`).
-3. The workflow in `.github/workflows/release.yml` builds + publishes.
-
-```bash
-git tag v0.1.0 -m "Initial release"
-git push origin v0.1.0
+uv build              # produces dist/*.whl + dist/*.tar.gz
+uv publish            # uses ~/.pypirc or UV_PUBLISH_TOKEN
 ```
 
 ## Where Augur lives
