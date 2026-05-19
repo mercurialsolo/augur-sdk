@@ -1,0 +1,81 @@
+site_name: Augur SDK
+site_description: Instrument any screenshot-grounded computer-use agent (CUA) — local bundle writer + Sentry-style DSN streaming.
+site_url: https://mercurialsolo.github.io/augur-sdk/
+repo_url: https://github.com/mercurialsolo/augur-sdk
+repo_name: mercurialsolo/augur-sdk
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Coding-Agent Quickstart: coding-agent-quickstart.md
+  - Concepts:
+      - DSN: concepts/dsn.md
+      - Capture Modes: concepts/capture-modes.md
+      - Bundle Layout: concepts/bundle-layout.md
+      - Redaction: concepts/redaction.md
+      - Diagnostics: concepts/diagnostics.md
+  - Integrations:
+      - Python: integrations/python.md
+      - Playwright: integrations/playwright.md
+      - Mantis: integrations/mantis.md
+  - Reference:
+      - API: reference/api.md
+      - HTTP API: reference/http-api.md
+      - Adapter Authoring: reference/adapter-authoring.md
+  - Spec: spec.md
+  - Changelog: changelog.md

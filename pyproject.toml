@@ -37,11 +37,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mercurialsolo/augur-sdk"
+Homepage = "https://mercurialsolo.github.io/augur-sdk/"
 Repository = "https://github.com/mercurialsolo/augur-sdk"
-Documentation = "https://github.com/mercurialsolo/augur-sdk#readme"
+Documentation = "https://mercurialsolo.github.io/augur-sdk/"
 Issues = "https://github.com/mercurialsolo/augur-sdk/issues"
-Changelog = "https://github.com/mercurialsolo/augur-sdk/blob/main/CHANGELOG.md"
+Changelog = "https://mercurialsolo.github.io/augur-sdk/changelog/"
 
 [build-system]
 requires = ["hatchling"]
@@ -66,6 +66,11 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
     "mypy>=1.10",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-include-markdown-plugin>=6.2",
 ]
 
 [tool.ruff]

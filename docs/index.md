@@ -22,7 +22,8 @@ Sentry — instrument once, debug forever.
 | See every public API symbol                    | [reference/api.md](./reference/api.md)                   |
 | See the HTTP API a coding agent can call       | [reference/http-api.md](./reference/http-api.md)         |
 | Implement an adapter for a new framework       | [reference/adapter-authoring.md](./reference/adapter-authoring.md) |
-| Know the normative contract this SDK ships     | [../SPEC.md](../SPEC.md)                                 |
+| Know the normative contract this SDK ships     | [spec.md](./spec.md)                                     |
+| Track what changed across releases             | [changelog.md](./changelog.md)                           |
 
 ## The integration in one screen
 

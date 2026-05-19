@@ -3,6 +3,9 @@
 [![PyPI](https://img.shields.io/pypi/v/augur-sdk.svg)](https://pypi.org/project/augur-sdk/)
 [![Python](https://img.shields.io/pypi/pyversions/augur-sdk.svg)](https://pypi.org/project/augur-sdk/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-mercurialsolo.github.io/augur--sdk-blue.svg)](https://mercurialsolo.github.io/augur-sdk/)
+
+**Full docs:** https://mercurialsolo.github.io/augur-sdk/
 
 Instrument any **screenshot-grounded computer-use agent** (CUA) with one
 context manager. Streams traces to **Augur** (a hosted cloud service for
