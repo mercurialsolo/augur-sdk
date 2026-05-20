@@ -6,6 +6,30 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-05-20
+
+### Added
+
+- **`DebugSession.set_capture_mode(mode)`**: change the active
+  capture mode mid-run. The next `record_step` (and every subsequent
+  one) gets an explicit `capture_mode` field stamped on the
+  StepTrace. Lets a CUA start in `metadata` (cheap) and upgrade to
+  `screenshots` after the first failed verifier check, without
+  restarting the session. Matches `step_trace.schema.json`'s new
+  optional `capture_mode` field (closes upstream augur#36).
+- **`DebugSession.append_log(text, step_index=None, name="run")`**:
+  convenience to stream a runner-log chunk to the server's
+  `POST /api/v1/runs/<id>/logs` endpoint. Routes to
+  `logs/step-<idx>.log` when `step_index` is set, else
+  `logs/<name>.log`. No-op when streaming is disabled
+  (the bundle on disk owns local logs). Closes upstream augur#17.
+
+### Schema
+
+- Vendored `step_trace.schema.json` mirrors the upstream addition of
+  the optional `capture_mode` field. Additive; every 0.1 bundle
+  still validates.
+
 ## [0.1.2] — 2026-05-19
 
 ### Fixed

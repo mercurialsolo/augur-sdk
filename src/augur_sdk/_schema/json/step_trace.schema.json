@@ -34,6 +34,10 @@
       "enum": ["pending", "running", "succeeded", "failed", "skipped", "recovered"]
     },
     "failure_class": {"$ref": "failure_class.schema.json"},
+    "capture_mode": {
+      "$ref": "capture_mode.schema.json",
+      "description": "Optional per-step override of manifest.capture_mode. Producers MAY change the active capture mode mid-run (e.g. start in `metadata`, upgrade to `screenshots` after the first failed verifier check). When present, this is the mode in effect for THIS step's artifacts. Consumers MUST treat absence as 'inherits the manifest mode'. Closes augur#36."
+    },
     "started_at": {"type": "string", "format": "date-time"},
     "ended_at": {"type": ["string", "null"], "format": "date-time"},
     "duration_ms": {"type": ["integer", "null"], "minimum": 0},

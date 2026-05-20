@@ -75,6 +75,10 @@ class DebugSession:
         self._open = False
         self._manifest: BundleManifest | None = None
         self._live_endpoints: dict[str, str] = {}
+        # Optional per-step capture_mode override (#36). Set via
+        # set_capture_mode(); None means "inherit manifest mode" and
+        # no `capture_mode` field is stamped on the step.
+        self._capture_mode_override: str | None = None
         # Optional streaming sink (Sentry-style). DSN arg wins; otherwise
         # consult AUGUR_DSN env var. None disables streaming.
         parsed_dsn = DSN.from_env(dsn)
@@ -143,6 +147,13 @@ class DebugSession:
 
     def record_step(self, step: StepTrace) -> None:
         self._require_open()
+        # Per-step capture_mode override (#36): if set_capture_mode()
+        # changed the active mode since the last record_step, stamp
+        # the override onto this step (and only this one; the override
+        # persists in self._capture_mode_override for subsequent
+        # record_step calls until explicitly cleared).
+        if self._capture_mode_override and "capture_mode" not in step:
+            step["capture_mode"] = self._capture_mode_override  # type: ignore[typeddict-unknown-key]
         self._recorder.record_step(step)
         if self._stream is not None:
             redacted = self.redaction_policy.apply(dict(step))
@@ -177,6 +188,50 @@ class DebugSession:
     def set_status(self, status: str) -> None:
         """Override the run's terminal status. Otherwise inferred at close time."""
         self._status = status
+
+    def set_capture_mode(self, mode: str | CaptureMode) -> None:
+        """Change the active capture mode from this point forward.
+
+        The next :py:meth:`record_step` (and every subsequent one) gets
+        an explicit ``capture_mode`` field stamped on the StepTrace
+        with the new mode, per `step_trace.schema.json` (#36). Use to
+        upgrade — e.g. ``session.set_capture_mode("screenshots")``
+        after the first failed verifier — without restarting the
+        session.
+
+        The manifest's ``capture_mode`` (set at construction) remains
+        the default for steps that don't carry an override.
+        """
+        self._require_open()
+        if isinstance(mode, CaptureMode):
+            self._capture_mode_override = mode.value
+        else:
+            # Validate against the canonical enum without forcing
+            # callers to import the enum.
+            self._capture_mode_override = resolve_capture_mode(mode).value
+
+    def append_log(
+        self,
+        text: str,
+        *,
+        step_index: int | None = None,
+        name: str = "run",
+    ) -> None:
+        """Append a log chunk to the server (#17).
+
+        When streaming is enabled (``AUGUR_DSN`` set), POSTs to
+        ``/api/v1/runs/<run_id>/logs``. When streaming is off, this
+        is a no-op — local bundles don't have a server-side log
+        store and producers that want local logs should write to the
+        bundle's ``logs/`` directory directly via their store.
+
+        ``step_index``, when set, routes the chunk to
+        ``logs/step-<idx>.log`` instead of ``logs/<name>.log``.
+        """
+        self._require_open()
+        if self._stream is None:
+            return
+        self._stream.post_logs(text=text, name=name, step_index=step_index)
 
     def add_tag(self, key: str, value: str) -> None:
         self._tags[key] = value

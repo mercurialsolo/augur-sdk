@@ -138,6 +138,21 @@ class StreamingSink:
             )
         )
 
+    def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None:
+        """Append a text chunk to the server's logs/ directory (#17).
+
+        POST /api/v1/runs/<run_id>/logs with a JSON body. Server
+        appends to logs/<name>.log (or logs/step-<idx>.log when
+        step_index is set), bounded at 1 MB per file. Like every
+        other post on this sink, fire-and-forget on a background
+        thread — the bundle on disk is the source of truth.
+        """
+        run_id = self._run_id or "unknown"
+        body: dict[str, Any] = {"text": text, "name": name}
+        if step_index is not None:
+            body["step_index"] = step_index
+        self._spawn(lambda: self._post_json(f"/runs/{run_id}/logs", body, method="POST"))
+
     # ── internals ──────────────────────────────────────────────────────────
 
     def _spawn(self, fn: Any) -> None:
