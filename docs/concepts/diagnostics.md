@@ -60,6 +60,10 @@ augur diagnose /path/to/bundle --rules cua --fail-on high
 | `cua.missing_observation`        | low      | Step refs a PNG that's neither on disk nor in `missing[]`  |
 | `cua.replay_diff`                | medium   | Replay fixture available for a failing step               |
 | `cua.high_cost_infra_failure`    | high     | Early-run infra failure on a long-running plan             |
+| `cua.uncategorized_failure`      | low      | Step failed but `failure_class` is missing or `"unknown"`  |
+
+See [failure-class-taxonomy.md](./failure-class-taxonomy.md) for the
+canonical vocabulary the generic rules reason about.
 
 ## Adapter packs
 

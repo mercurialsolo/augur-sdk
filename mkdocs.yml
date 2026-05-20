@@ -69,6 +69,7 @@ nav:
       - Bundle Layout: concepts/bundle-layout.md
       - Redaction: concepts/redaction.md
       - Diagnostics: concepts/diagnostics.md
+      - Failure-Class Taxonomy: concepts/failure-class-taxonomy.md
   - Integrations:
       - Python: integrations/python.md
       - Playwright: integrations/playwright.md

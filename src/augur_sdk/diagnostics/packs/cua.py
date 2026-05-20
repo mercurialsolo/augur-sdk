@@ -365,8 +365,8 @@ def uncategorized_failure(ctx: BundleContext, r: RuleResult) -> None:
             recommendation=(
                 f"Inspect step {idx} ({intent!r}) and the verdict.reason "
                 f"to identify the failure pattern, then extend the producer's "
-                f"classify() rules. See docs/failure-class-taxonomy.md for the "
-                f"canonical vocabulary."
+                f"classify() rules. Canonical vocabulary: "
+                f"https://mercurialsolo.github.io/augur-sdk/concepts/failure-class-taxonomy/"
             ),
         )
 
