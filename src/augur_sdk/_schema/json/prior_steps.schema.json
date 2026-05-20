@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/prior_steps.schema.json",
+  "title": "PriorSteps",
+  "description": "Replay-fixture sibling: a compact list of the steps that preceded the fixture's target step in the original run. The replay workbench writes this to `replay/<step_index:04d>.prior.json` whenever a fixture's `prior_steps` is non-null, so the agent under test has the same context the original run had. Schema is intentionally a thin subset of step_trace (action + verdict + intent only) — the producer drops observation, costs, latency, etc. to keep prior context bounded.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["step_index", "action", "verdict"],
+    "additionalProperties": false,
+    "properties": {
+      "step_index": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "0- or 1-based per the producer; MUST be strictly less than the fixture's step_index."
+      },
+      "intent": {
+        "type": ["string", "null"],
+        "description": "Natural-language summary of what this step was trying to do. May be null when the original trace didn't carry one."
+      },
+      "action": {
+        "type": "object",
+        "description": "Shape matches `step.action` from step_trace.schema.json so downstream pipelines can treat it identically.",
+        "required": ["type"],
+        "additionalProperties": true,
+        "properties": {
+          "type": {"type": "string"},
+          "params": {"type": "object", "additionalProperties": true},
+          "coordinate_space": {"$ref": "coordinate_space.schema.json"},
+          "dispatch_backend": {"type": "string"}
+        }
+      },
+      "verdict": {
+        "type": "object",
+        "description": "Shape matches `step.verdict` from step_trace.schema.json. The verifier's outcome for this prior step, so the agent under test can see what was passed/failed up to its starting point.",
+        "required": ["status"],
+        "additionalProperties": true,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["passed", "failed", "recoverable", "skipped", "unknown"]
+          },
+          "reason": {"type": "string"},
+          "score": {"type": "number", "minimum": 0, "maximum": 1},
+          "comparator": {"type": "string"},
+          "evidence_refs": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

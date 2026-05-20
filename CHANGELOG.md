@@ -6,6 +6,25 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.9] — 2026-05-20
+
+### Schema
+
+- **Vendor `prior_steps.schema.json`** (closes #4). The replay
+  workbench's sibling artifact `replay/<step_index:04d>.prior.json`
+  finally has a vendored schema in the SDK; producers can now
+  validate prior-step payloads offline via
+  `augur_sdk._schema.validator_for("prior_steps")`. Byte-identical
+  with the upstream `mercurialsolo/augur` monorepo. Surfaced during
+  the augur#55 schema v1.0 freeze review.
+
+### Tests
+
+- `tests/test_prior_steps_schema.py` (13 tests) — required-field
+  failures, additionalProperties on the item level, action.type +
+  verdict.status / verdict.score validation, and a bundle-disk
+  round-trip alongside the existing replay fixture coverage.
+
 ## [0.1.8] — 2026-05-20
 
 ### Added — producer-side helpers for the 0.1.6 training-data substrate

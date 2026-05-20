@@ -229,6 +229,15 @@ bundle can serve both debugging and SFT/DPO/RL training pipelines:
   `alternatives[]` (each with an `action` and optional
   `reward_estimate`) and accepts a `comparator` of
   `verifier | model-judge | human-rater | replay-diff`.
+- `prior_steps.schema.json` (new short name `prior_steps`, since
+  0.1.9): sibling of `replay_fixture` written to
+  `<bundle>/replay/<step_index:04d>.prior.json` when a fixture's
+  `prior_steps` is non-null. Compact list of the steps that
+  preceded the fixture's target — intentionally a thin subset of
+  `step_trace` (action + verdict + intent only) so the replay
+  agent sees the same context the original run had without
+  inheriting observations/costs. Resolves a gap surfaced during
+  the upstream augur#55 v1.0 freeze review.
 
 Every field is additive and optional; all 0.1.x bundles produced by
 prior SDK versions continue to validate. Producer-side helpers
@@ -326,7 +335,7 @@ The SDK does not:
 ## 7. Status
 
 - **Schema version**: `0.1`
-- **SDK version**: `0.1.8`
+- **SDK version**: `0.1.9`
 - **Supported Python**: 3.11, 3.12, 3.13
 - **Runtime deps**: `jsonschema`, `referencing`, `urllib3`
 

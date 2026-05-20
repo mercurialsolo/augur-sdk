@@ -34,6 +34,7 @@ viewer, CLI, and coding agents read bundles without configuration.
     ...
   replay/
     0011_fixture.json                # replay fixtures (capture_mode=replay or full)
+    0011.prior.json                  # prior-step context for the fixture (since 0.1.9)
   modelio/
     0000-planner-0.json              # one ModelIORecord per call (since 0.1.6)
     0000-grounding-0.json             #   <step:04d>-<layer>-<seq>.json
