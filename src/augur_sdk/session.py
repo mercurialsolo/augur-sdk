@@ -210,6 +210,62 @@ class DebugSession:
             # callers to import the enum.
             self._capture_mode_override = resolve_capture_mode(mode).value
 
+    def attach_verifier(
+        self,
+        step_index: int,
+        *,
+        status: str,
+        reason: str | None = None,
+        check: str | None = None,
+        expected: Any = None,
+        actual: Any = None,
+        evidence_refs: list[str] | None = None,
+    ) -> None:
+        """Add a post-hoc verdict to a previously-recorded step (#51).
+
+        For traces whose native format carries no verifier signal
+        (OpenAI / Anthropic Computer-Use, raw OSWorld), an external
+        harness can call this after running its own check against the
+        step's post-state. The step's `verdict` field is replaced
+        in-place; on close, the bundle reflects the attached verdict.
+
+        ``status`` follows the canonical verdict enum (passed, failed,
+        recoverable, skipped, unknown). ``check`` / ``expected`` /
+        ``actual`` are folded into ``verdict.reason`` for traceability
+        when no explicit reason is provided.
+
+        Precedence (documented contract):
+          native verdict > attach_verifier > inferred default
+
+        i.e. if the producer already recorded a non-unknown verdict,
+        attach_verifier overrides it. Callers who want the gentler
+        "fill in only when missing" behavior can check via
+        :py:meth:`step` first.
+        """
+        self._require_open()
+        composed_reason = reason
+        if composed_reason is None and check is not None:
+            composed_reason = (
+                f"{check}: expected={expected!r} actual={actual!r}"
+            )
+        ok = self._recorder.patch_step_verdict(
+            step_index,
+            status=status,
+            reason=composed_reason,
+            evidence_refs=evidence_refs,
+        )
+        if not ok:
+            raise ValueError(
+                f"attach_verifier: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        # Echo through the streaming sink so live viewers see the
+        # patched verdict without waiting for close().
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
     def append_log(
         self,
         text: str,

@@ -146,6 +146,53 @@ def coordinate_space_mismatch(ctx: BundleContext, r: RuleResult) -> None:
             )
 
 
+@rule("cua.dom_used_as_runtime_target", severity="high")
+def dom_used_as_runtime_target(ctx: BundleContext, r: RuleResult) -> None:
+    """Spec §4 invariant: runtime action selection MUST be screenshot-
+    grounded for any adapter claiming CUA semantics. DOM probes are
+    diagnostic-only.
+
+    Fires when a step has both:
+      - grounding.provenance == "dom", AND
+      - action.params carries numeric x/y (the DOM probe was used as
+        a runtime coordinate, not just a side-channel sanity check).
+
+    Distinct from cua.coordinate_space_mismatch (which checks the
+    narrower "provenance=dom AND coordinate_space=viewport_css_px"
+    combo). This one fires on ANY DOM-grounded runtime target,
+    regardless of declared coordinate space."""
+    for step in ctx.steps:
+        grounding = step.get("grounding") or {}
+        if grounding.get("provenance") != "dom":
+            continue
+        action = step.get("action") or {}
+        params = action.get("params") or {}
+        if not (
+            isinstance(params.get("x"), (int, float))
+            and isinstance(params.get("y"), (int, float))
+        ):
+            continue
+        idx = step["step_index"]
+        r.emit(
+            rule_id=dom_used_as_runtime_target.rule_id,
+            severity=dom_used_as_runtime_target.severity,
+            summary=(
+                f"Step {idx} used a DOM-derived coordinate "
+                f"({params['x']},{params['y']}) as the runtime click target. "
+                f"Spec §4 requires screenshot-grounded runtime targets; "
+                f"DOM probes are diagnostic-only."
+            ),
+            evidence=[_step_evidence(step)],
+            step_index=idx,
+            recommendation=(
+                "Run the action through the pixel grounder and dispatch on "
+                "its output instead. If DOM coords are genuinely needed for "
+                "a special-case step, mark grounding.provenance='human' "
+                "or 'replay' to document the deliberate override."
+            ),
+        )
+
+
 @rule("cua.no_state_change", severity="medium")
 def no_state_change(ctx: BundleContext, r: RuleResult) -> None:
     """Step is flagged failure_class=no_state_change or verdict.status=recoverable
@@ -375,6 +422,7 @@ CUA_RULES: list[Rule] = [
     repeated_action_stable_frame,
     click_outside_viewport,
     coordinate_space_mismatch,
+    dom_used_as_runtime_target,
     no_state_change,
     verifier_disagrees,
     dispatch_ok_state_fail,

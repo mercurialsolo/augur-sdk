@@ -44,6 +44,32 @@ class EventRecorder:
         with self._lock:
             return [deepcopy(self._steps[i]) for i in sorted(self._steps)]
 
+    def patch_step_verdict(
+        self,
+        step_index: int,
+        *,
+        status: str,
+        reason: str | None = None,
+        evidence_refs: list[str] | None = None,
+    ) -> bool:
+        """Replace the verdict on a previously-recorded step.
+
+        Returns True if the step existed and was patched, False
+        otherwise. Used by DebugSession.attach_verifier() so an
+        external harness can add post-hoc verdicts to a step the
+        producer left as unknown (#51)."""
+        with self._lock:
+            step = self._steps.get(step_index)
+            if step is None:
+                return False
+            verdict: dict[str, Any] = {"status": status}
+            if reason is not None:
+                verdict["reason"] = reason
+            if evidence_refs is not None:
+                verdict["evidence_refs"] = evidence_refs
+            step["verdict"] = verdict  # type: ignore[typeddict-item]
+            return True
+
     # -- events --
 
     def record_event(self, event: DecisionEvent) -> None:

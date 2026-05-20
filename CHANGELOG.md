@@ -6,6 +6,23 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-05-20
+
+### Added
+
+- **`DebugSession.attach_verifier(step_index, status=..., reason=..., check=..., expected=..., actual=..., evidence_refs=...)`**:
+  let an external harness add a post-hoc verdict to a step the
+  producer didn't categorize. Useful for traces from frameworks
+  with no native verifier signal (OpenAI / Anthropic Computer-Use,
+  raw OSWorld). Replaces the step's `verdict` field in-place.
+  Streams the patched step through the live sink so viewers see
+  the update without waiting for close(). Closes upstream augur#51.
+- New `cua.dom_used_as_runtime_target` diagnostic rule (severity:
+  high). Fires when a step's `grounding.provenance == "dom"` AND
+  `action.params` carries numeric x/y — a spec §4 invariant
+  violation (runtime targets must be screenshot-grounded; DOM
+  probes are diagnostic-only). Closes upstream augur#50.
+
 ## [0.1.4] — 2026-05-19
 
 ### Added
