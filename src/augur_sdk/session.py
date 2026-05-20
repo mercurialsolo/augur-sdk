@@ -20,7 +20,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any
 
-from augur_sdk._schema import SCHEMA_VERSION
+from augur_sdk._schema import SCHEMA_VERSION, ValidationError, validator_for
 from augur_sdk.bundle import write_bundle
 from augur_sdk.capture import CaptureMode, resolve_capture_mode
 from augur_sdk.models import BundleManifest, DecisionEvent, StepTrace
@@ -29,6 +29,8 @@ from augur_sdk.recorder import EventRecorder
 from augur_sdk.redaction import DefaultRedactionPolicy, RedactionPolicy
 from augur_sdk.storage import LocalFSStore, Store
 from augur_sdk.streaming import DSN, StreamingSink
+
+_VERDICT_COMPARATORS = {"verifier", "model-judge", "exact-match", "human"}
 
 
 def _utcnow_iso() -> str:
@@ -79,6 +81,9 @@ class DebugSession:
         # set_capture_mode(); None means "inherit manifest mode" and
         # no `capture_mode` field is stamped on the step.
         self._capture_mode_override: str | None = None
+        # Session-level cost rollup (#58). Populated by set_costs();
+        # surfaces on both the session record and the manifest.
+        self._session_costs: dict[str, int | float] = {}
         # Optional streaming sink (Sentry-style). DSN arg wins; otherwise
         # consult AUGUR_DSN env var. None disables streaming.
         parsed_dsn = DSN.from_env(dsn)
@@ -266,6 +271,193 @@ class DebugSession:
             if patched is not None:
                 self._stream.put_step(self.redaction_policy.apply(dict(patched)))
 
+    def set_score(
+        self,
+        step_index: int,
+        score: float,
+        *,
+        comparator: str | None = None,
+        components: dict[str, float] | None = None,
+    ) -> None:
+        """Attach a continuous reward signal to a recorded step's verdict (#59).
+
+        Merges into the existing verdict object — the categorical
+        ``status`` is preserved. ``score`` is clamped to [0.0, 1.0].
+        ``comparator`` must be one of the canonical values:
+        ``verifier``, ``model-judge``, ``exact-match``, ``human``.
+        ``components`` is a free-form breakdown (per-criterion
+        contributions); each value SHOULD be a float in [0,1] but
+        the schema does not enforce that.
+
+        Raises ``ValueError`` when no step exists at ``step_index``
+        or when ``comparator`` is not in the canonical set.
+        """
+        self._require_open()
+        if comparator is not None and comparator not in _VERDICT_COMPARATORS:
+            raise ValueError(
+                f"comparator must be one of {sorted(_VERDICT_COMPARATORS)}, "
+                f"got {comparator!r}"
+            )
+        clamped = max(0.0, min(1.0, float(score)))
+        ok = self._recorder.merge_step_verdict_score(
+            step_index,
+            score=clamped,
+            comparator=comparator,
+            components=components,
+        )
+        if not ok:
+            raise ValueError(
+                f"set_score: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def set_costs(
+        self,
+        *,
+        total_usd: float | None = None,
+        model_usd: float | None = None,
+        gpu_usd: float | None = None,
+        proxy_usd: float | None = None,
+        tokens_in: int | None = None,
+        tokens_out: int | None = None,
+        cache_hit_tokens: int | None = None,
+    ) -> None:
+        """Stamp a structured cost rollup on the session (#58).
+
+        Surfaces on both the session record (``trace.json``) and the
+        manifest (``manifest.json#/costs``) so cost-aware consumers
+        (run-list dashboards, training pipelines) can read either.
+        Repeated calls overwrite previously-set fields; unset fields
+        are preserved across calls. Pass only the dimensions you
+        measured.
+        """
+        self._require_open()
+        for name, value in {
+            "total_usd": total_usd,
+            "model_usd": model_usd,
+            "gpu_usd": gpu_usd,
+            "proxy_usd": proxy_usd,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "cache_hit_tokens": cache_hit_tokens,
+        }.items():
+            if value is not None:
+                self._session_costs[name] = value
+
+    def set_step_costs(
+        self,
+        step_index: int,
+        *,
+        total_usd: float | None = None,
+        model_usd: float | None = None,
+        tokens_in: int | None = None,
+        tokens_out: int | None = None,
+        cache_hit_tokens: int | None = None,
+    ) -> None:
+        """Patch a previously-recorded step's structured costs (#58).
+
+        Merges into any existing ``step.costs`` object; unset keys
+        are preserved. Raises ``ValueError`` if no step exists at
+        ``step_index``.
+        """
+        self._require_open()
+        patch: dict[str, int | float] = {}
+        for name, value in {
+            "total_usd": total_usd,
+            "model_usd": model_usd,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "cache_hit_tokens": cache_hit_tokens,
+        }.items():
+            if value is not None:
+                patch[name] = value
+        if not patch:
+            return
+        ok = self._recorder.merge_step_costs(step_index, costs=patch)
+        if not ok:
+            raise ValueError(
+                f"set_step_costs: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def record_modelio(
+        self,
+        record: dict[str, Any],
+        *,
+        step_index: int | None = None,
+        layer: str | None = None,
+        validate: bool = True,
+    ) -> str:
+        """Stage one model-call record (#56 producer side).
+
+        Validates ``record`` against the vendored
+        ``modelio.schema.json`` (Draft 2020-12) unless ``validate`` is
+        False. Writes the record to
+        ``modelio/<step_index:04d>-<layer>-<seq>.json`` on session
+        close (or ``modelio/run-<layer>-<seq>.json`` when
+        ``step_index`` is None). The session's redaction policy is
+        applied before persistence.
+
+        Idempotent on the record's ``prompt_hash`` (when set): a
+        second call with the same hash returns the existing path
+        without staging again. Returns the bundle-relative path of
+        the persisted record.
+
+        If ``layer`` is given and the record doesn't already carry
+        one, it is stamped onto the record. If neither is set, the
+        layer defaults to ``"model"`` for path construction.
+        """
+        self._require_open()
+        rec = dict(record)
+        if layer is not None and "layer" not in rec:
+            rec["layer"] = layer
+        # Default schema_version + ts for ergonomics — callers MAY
+        # override either by setting them directly on the record.
+        rec.setdefault("schema_version", SCHEMA_VERSION)
+        rec.setdefault("ts", _utcnow_iso())
+        if step_index is not None:
+            rec.setdefault("step_index", step_index)
+
+        # Idempotency: same prompt_hash → same path, no duplicate stage.
+        prompt_hash = rec.get("prompt_hash")
+        if isinstance(prompt_hash, str):
+            existing = self._recorder.lookup_modelio_by_hash(prompt_hash)
+            if existing is not None:
+                return existing
+
+        if validate:
+            try:
+                validator_for("modelio").validate(rec)
+            except ValidationError as exc:
+                raise ValueError(
+                    f"record_modelio: payload does not match modelio.schema.json: {exc.message}"
+                ) from exc
+
+        # Redact before persistence — same path payloads take.
+        redacted = self.redaction_policy.apply(rec)
+        if isinstance(redacted, dict):
+            redacted.setdefault("redaction_applied", True)
+        path_layer = (
+            redacted.get("layer") if isinstance(redacted, dict) else None
+        ) or layer or "model"
+        relpath = self._recorder.reserve_modelio_path(
+            step_index=step_index, layer=str(path_layer)
+        )
+        self._recorder.stage_modelio(
+            relpath,
+            redacted if isinstance(redacted, dict) else rec,
+            prompt_hash=prompt_hash if isinstance(prompt_hash, str) else None,
+        )
+        return relpath
+
     def append_log(
         self,
         text: str,
@@ -355,6 +547,8 @@ class DebugSession:
             record["tags"] = dict(self._tags)
         if self._live_endpoints:
             record["live"] = dict(self._live_endpoints)  # type: ignore[typeddict-item]
+        if self._session_costs:
+            record["costs"] = dict(self._session_costs)  # type: ignore[typeddict-unknown-key]
         return record
 
 

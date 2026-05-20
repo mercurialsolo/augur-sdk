@@ -27,6 +27,12 @@ class EventRecorder:
         self._events_by_step: dict[int | None, list[DecisionEvent]] = defaultdict(list)
         self._observation_bytes: dict[str, bytes] = {}
         # observation_bytes is keyed by bundle-relative path
+        self._modelio_records: dict[str, dict[str, Any]] = {}
+        # modelio is keyed by bundle-relative path (modelio/<step:04d>-<layer>-<seq>.json)
+        self._modelio_seq_counter: dict[tuple[int | None, str], int] = {}
+        # (step_index, layer) → next seq for path uniqueness
+        self._modelio_hash_index: dict[str, str] = {}
+        # prompt_hash → bundle-relative path (for record_modelio idempotency)
 
     # -- steps --
 
@@ -70,6 +76,52 @@ class EventRecorder:
             step["verdict"] = verdict  # type: ignore[typeddict-item]
             return True
 
+    def merge_step_verdict_score(
+        self,
+        step_index: int,
+        *,
+        score: float,
+        comparator: str | None = None,
+        components: dict[str, float] | None = None,
+    ) -> bool:
+        """Merge score-related fields into a step's existing verdict.
+
+        Unlike `patch_step_verdict`, the categorical `status` and
+        existing `reason`/`evidence_refs` are preserved. Used by
+        DebugSession.set_score() (#59)."""
+        with self._lock:
+            step = self._steps.get(step_index)
+            if step is None:
+                return False
+            verdict: dict[str, Any] = dict(step.get("verdict") or {"status": "unknown"})
+            verdict["score"] = score
+            if comparator is not None:
+                verdict["comparator"] = comparator
+            if components is not None:
+                verdict["score_components"] = dict(components)
+            step["verdict"] = verdict  # type: ignore[typeddict-item]
+            return True
+
+    def merge_step_costs(
+        self,
+        step_index: int,
+        *,
+        costs: dict[str, int | float],
+    ) -> bool:
+        """Merge a partial costs object into a step's existing costs.
+
+        Existing keys are overwritten by the patch; absent keys are
+        preserved. Used by DebugSession.set_step_costs() (#58)."""
+        with self._lock:
+            step = self._steps.get(step_index)
+            if step is None:
+                return False
+            prior = step.get("costs") or {}
+            existing: dict[str, Any] = dict(prior) if isinstance(prior, dict) else {}
+            existing.update(costs)
+            step["costs"] = existing  # type: ignore[typeddict-unknown-key]
+            return True
+
     # -- events --
 
     def record_event(self, event: DecisionEvent) -> None:
@@ -97,6 +149,46 @@ class EventRecorder:
     def staged_observations(self) -> dict[str, bytes]:
         with self._lock:
             return dict(self._observation_bytes)
+
+    # -- modelio records (#56 producer side) --
+
+    def reserve_modelio_path(
+        self, *, step_index: int | None, layer: str
+    ) -> str:
+        """Allocate a unique modelio bundle-relative path.
+
+        Convention: ``modelio/<step:04d>-<layer>-<seq>.json`` for
+        step-scoped calls and ``modelio/run-<layer>-<seq>.json`` for
+        run-scoped (step_index is None). Seq is per-(step, layer)
+        monotonic starting at 0."""
+        key = (step_index, layer)
+        with self._lock:
+            seq = self._modelio_seq_counter.get(key, 0)
+            self._modelio_seq_counter[key] = seq + 1
+        prefix = f"{step_index:04d}" if step_index is not None else "run"
+        return f"modelio/{prefix}-{layer}-{seq}.json"
+
+    def stage_modelio(
+        self,
+        relpath: str,
+        record: dict[str, Any],
+        *,
+        prompt_hash: str | None = None,
+    ) -> None:
+        if not relpath.startswith("modelio/"):
+            raise ValueError(f"modelio records must be under modelio/: {relpath!r}")
+        with self._lock:
+            self._modelio_records[relpath] = deepcopy(record)
+            if prompt_hash is not None:
+                self._modelio_hash_index[prompt_hash] = relpath
+
+    def lookup_modelio_by_hash(self, prompt_hash: str) -> str | None:
+        with self._lock:
+            return self._modelio_hash_index.get(prompt_hash)
+
+    def staged_modelio(self) -> dict[str, dict[str, Any]]:
+        with self._lock:
+            return {k: deepcopy(v) for k, v in self._modelio_records.items()}
 
     # -- snapshot for tests --
 

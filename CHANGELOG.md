@@ -6,6 +6,61 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.8] — 2026-05-20
+
+### Added — producer-side helpers for the 0.1.6 training-data substrate
+
+Closes the three open SDK issues (#1, #2, #3). Until 0.1.8 the
+costs/score/modelio schema fields existed but adapters had to mutate
+session internals to emit them.
+
+- **`DebugSession.set_costs(*, total_usd=…, model_usd=…, gpu_usd=…,
+  proxy_usd=…, tokens_in=…, tokens_out=…, cache_hit_tokens=…)`**:
+  stamp a structured cost rollup on the session. Surfaces on both
+  the session record (`trace.json`) and the manifest
+  (`manifest.json#/costs`) so cost-aware consumers (run-list
+  dashboards, training pipelines) can read either. Repeat-call merge
+  semantics; unset dimensions are preserved. Closes #1.
+- **`DebugSession.set_step_costs(step_index, *, total_usd=…,
+  model_usd=…, tokens_in=…, tokens_out=…, cache_hit_tokens=…)`**:
+  patch a recorded step's `costs` object. Merge semantics; raises
+  `ValueError` if no step exists at `step_index`. Closes #1.
+- **`DebugSession.record_modelio(record, *, step_index=None,
+  layer=None, validate=True)`**: canonical producer-side helper for
+  one model call. Validates against the vendored
+  `modelio.schema.json`, stages under
+  `modelio/<step_index:04d>-<layer>-<seq>.json` (or
+  `modelio/run-<layer>-<seq>.json` when `step_index` is None), and
+  is **idempotent on `prompt_hash`** — repeat calls with the same
+  hash return the existing path without staging a duplicate.
+  Applies the session's `RedactionPolicy` and stamps
+  `redaction_applied: true`. Stamps `layer` onto the record when
+  the kwarg is provided and the record doesn't already carry one.
+  Closes #2.
+- **`DebugSession.set_score(step_index, score, *, comparator=None,
+  components=None)`**: attach a continuous reward signal (0..1) to
+  a recorded step's verdict. Merges into the existing verdict
+  (status/reason preserved); score clamped to `[0.0, 1.0]`;
+  `comparator` validated against the canonical enum
+  (`verifier | model-judge | exact-match | human`). Closes #3.
+
+### Schema
+
+- `manifest.schema.json` gains optional `costs` (mirrors the
+  session-level rollup) and two new path constants in `paths`:
+  `modelio` → `modelio/` and `preferences` → `preferences/`.
+  Additive; every prior 0.1.x manifest continues to validate.
+- Bundle layout: new `modelio/` directory is written automatically
+  when `record_modelio` is called. The path tree in
+  `docs/concepts/bundle-layout.md` reflects the new entries.
+
+### Notes for producer authors
+
+- Step → modelio linkage is **path-based** (`<step:04d>-…`), not
+  field-based — `step_trace.schema.json` doesn't carry a
+  `modelio_refs` array. Consumers locate model calls for step N by
+  globbing `modelio/N*.json`.
+
 ## [0.1.7] — 2026-05-20
 
 ### Added

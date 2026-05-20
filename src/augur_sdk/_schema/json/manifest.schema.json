@@ -74,8 +74,24 @@
         "logs": {"type": "string", "const": "logs/"},
         "replay": {"type": "string", "const": "replay/"},
         "diagnostics": {"type": "string", "const": "diagnostics/"},
+        "modelio": {"type": "string", "const": "modelio/"},
+        "preferences": {"type": "string", "const": "preferences/"},
         "schema": {"type": "string", "const": "schema/"},
         "agent": {"type": "string", "const": "AGENT.md"}
+      }
+    },
+    "costs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Run-level cost rollup mirrored from the session record so cost-aware consumers (run-list dashboards, training pipelines) can read the manifest alone. Closes #58.",
+      "properties": {
+        "total_usd":        {"type": "number", "minimum": 0},
+        "model_usd":        {"type": "number", "minimum": 0},
+        "gpu_usd":          {"type": "number", "minimum": 0},
+        "proxy_usd":        {"type": "number", "minimum": 0},
+        "tokens_in":        {"type": "integer", "minimum": 0},
+        "tokens_out":       {"type": "integer", "minimum": 0},
+        "cache_hit_tokens": {"type": "integer", "minimum": 0}
       }
     },
     "signatures": {

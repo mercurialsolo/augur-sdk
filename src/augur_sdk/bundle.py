@@ -60,6 +60,8 @@ _PATH_MAP = {
     "logs": "logs/",
     "replay": "replay/",
     "diagnostics": "diagnostics/",
+    "modelio": "modelio/",
+    "preferences": "preferences/",
     "schema": "schema/",
     "agent": "AGENT.md",
 }
@@ -108,6 +110,15 @@ def write_bundle(
             f.write(data)
         if include_signatures:
             signatures[relpath] = _sha256(data)
+
+    # 1b. modelio records (#56 producer side, since 0.1.8)
+    modelio_records = recorder.staged_modelio()
+    for relpath, record in modelio_records.items():
+        payload = _dumps(record)
+        with store.open_write_text(relpath) as f:
+            f.write(payload)
+        if include_signatures:
+            signatures[relpath] = _sha256(payload.encode("utf-8"))
 
     # 2. per-step JSON
     for step in steps:
@@ -170,6 +181,9 @@ def write_bundle(
     missing = _compute_missing(steps, observation_bytes)
     if missing:
         manifest["missing"] = missing
+    session_costs = session.get("costs")
+    if isinstance(session_costs, dict) and session_costs:
+        manifest["costs"] = dict(session_costs)  # type: ignore[typeddict-unknown-key]
 
     # 6. AGENT.md — coding-agent-oriented index. We write this BEFORE adding
     # its signature to the manifest so the digest covers the rendered file.

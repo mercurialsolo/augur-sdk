@@ -89,6 +89,45 @@ def attach_verifier(
     actual: Any = None,
     evidence_refs: list[str] | None = None,
 ) -> None: ...
+
+# Producer-side training-data helpers (since 0.1.8)
+def set_costs(
+    *,
+    total_usd: float | None = None,
+    model_usd: float | None = None,
+    gpu_usd: float | None = None,
+    proxy_usd: float | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    cache_hit_tokens: int | None = None,
+) -> None: ...
+
+def set_step_costs(
+    step_index: int,
+    *,
+    total_usd: float | None = None,
+    model_usd: float | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    cache_hit_tokens: int | None = None,
+) -> None: ...
+
+def set_score(
+    step_index: int,
+    score: float,
+    *,
+    comparator: str | None = None,        # verifier|model-judge|exact-match|human
+    components: dict[str, float] | None = None,
+) -> None: ...
+
+def record_modelio(
+    record: dict,
+    *,
+    step_index: int | None = None,
+    layer: str | None = None,
+    validate: bool = True,
+) -> str:  # returns bundle-relative path
+    ...
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -102,6 +141,36 @@ wins over the override. Use it to upgrade from `metadata` to
 without it, to `logs/<name>.log`. No-op when streaming is disabled —
 local logs belong in the bundle's `logs/` directory written directly
 via the configured `Store`.
+
+### Training-data helpers (since 0.1.8)
+
+`set_costs(...)` stamps a run-level cost rollup on the session. The
+values appear on both the session record (`trace.json`) and the
+manifest (`manifest.json#/costs`) so cost-aware consumers can read
+either. Repeat calls are merge-on-call — unset dimensions are
+preserved across calls.
+
+`set_step_costs(step_index, ...)` patches the costs object on an
+already-recorded step. Merge semantics; raises `ValueError` if no
+step exists at `step_index`.
+
+`set_score(step_index, score, ...)` adds a continuous reward signal
+(0..1) to a recorded step's verdict. Merges into the existing
+verdict — the categorical `status` is preserved. Score is clamped
+to `[0.0, 1.0]`. `comparator`, when set, must be one of
+`verifier | model-judge | exact-match | human`.
+
+`record_modelio(record, *, step_index, layer, validate=True)` is the
+producer-side helper for one model call's full input + output.
+Validates the payload against `modelio.schema.json` (unless
+`validate=False`), applies the session's redaction policy
+(stamping `redaction_applied: true`), and writes to
+`modelio/<step_index:04d>-<layer>-<seq>.json` (or
+`modelio/run-<layer>-<seq>.json` for `step_index=None`). **Idempotent
+on `prompt_hash`** — repeat calls with the same hash return the
+existing path without staging a duplicate. Returns the bundle-relative
+path. Step → modelio linkage is path-based; consumers find a step's
+model calls by globbing `modelio/<step:04d>*.json`.
 
 `attach_verifier(step_index, status=..., ...)` lets an external harness
 add a post-hoc verdict to a step the producer left as `unknown` (or

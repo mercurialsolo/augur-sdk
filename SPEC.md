@@ -69,7 +69,8 @@ from augur_sdk import (
 `DebugSession` public methods:
 `attach_observation`, `record_step`, `record_event`, `set_status`,
 `add_tag`, `set_capture_mode` (since 0.1.3), `append_log` (since 0.1.3),
-`attach_verifier` (since 0.1.5), `close`.
+`attach_verifier` (since 0.1.5), `set_score` / `set_costs` /
+`set_step_costs` / `record_modelio` (since 0.1.8), `close`.
 
 ### Models (`augur_sdk.models`)
 
@@ -235,6 +236,41 @@ prior SDK versions continue to validate. Producer-side helpers
 until then, adapters MAY populate the new fields directly on the
 `StepTrace` dict they pass to `record_step()`.
 
+### 4.16 Training-data producer-side helpers (since 0.1.8)
+
+The 0.1.6 schema substrate (modelio, costs, verdict.score) gains
+producer-side SDK helpers so adapters don't have to mutate session
+internals to emit the new fields:
+
+- `DebugSession.set_costs(...)` and `set_step_costs(step_index, ...)`
+  MUST be merge-on-call (later kwargs win; unset dimensions are
+  preserved). `set_costs` surfaces on **both** the session record
+  and the manifest (`manifest.json#/costs`); `set_step_costs`
+  patches the step's `costs` object on disk.
+- `DebugSession.set_score(step_index, score, *, comparator,
+  components)` MUST merge into the existing verdict (the
+  categorical `status` is preserved); `score` MUST be clamped to
+  `[0.0, 1.0]`; `comparator`, when set, MUST be one of
+  `verifier | model-judge | exact-match | human`. Default
+  status→score mapping for absent score remains the consumer's
+  responsibility (passed→1.0, recoverable→0.5, failed/skipped/
+  unknown→0.0).
+- `DebugSession.record_modelio(record, *, step_index, layer,
+  validate=True)` MUST validate `record` against
+  `modelio.schema.json` (Draft 2020-12) unless `validate=False`,
+  apply the session's `RedactionPolicy` before persistence (stamping
+  `redaction_applied: true`), and be **idempotent on the record's
+  `prompt_hash`** — repeat calls with the same hash MUST return the
+  existing bundle-relative path without staging a duplicate file.
+  Path convention: `modelio/<step_index:04d>-<layer>-<seq>.json`
+  for step-scoped calls, `modelio/run-<layer>-<seq>.json` for
+  run-scoped (`step_index=None`); `<seq>` is a monotonic per-(step,
+  layer) counter starting at 0.
+
+Step → modelio linkage is **path-based**, not field-based:
+`step_trace.schema.json` carries no `modelio_refs` field. Consumers
+locate the model calls for step N by globbing `modelio/N*.json`.
+
 ### 4.15 `ModelApiAdapterBase` scaffolding (since 0.1.7)
 
 `augur_sdk.ModelApiAdapterBase` is shared scaffolding for adapters
@@ -290,7 +326,7 @@ The SDK does not:
 ## 7. Status
 
 - **Schema version**: `0.1`
-- **SDK version**: `0.1.7`
+- **SDK version**: `0.1.8`
 - **Supported Python**: 3.11, 3.12, 3.13
 - **Runtime deps**: `jsonschema`, `referencing`, `urllib3`
 
