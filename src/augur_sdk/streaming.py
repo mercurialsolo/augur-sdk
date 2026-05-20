@@ -185,21 +185,25 @@ class StreamingSink:
 
     def _send_heartbeat(self, *, last_event: str | None = None) -> None:
         url = self.dsn.base_url + "/heartbeat"
-        fields: dict[str, Any] = {
+        payload: dict[str, Any] = {
             "client_id": self.client_id,
             "client_name": self.client_name,
             "client_version": self.client_version,
             "capture_mode": self._capture_mode,
         }
         if self._run_id:
-            fields["run_id"] = self._run_id
+            payload["run_id"] = self._run_id
         if last_event:
-            fields["last_event"] = last_event
+            payload["last_event"] = last_event
+        body = json.dumps(payload).encode("utf-8")
         resp = self._http.request(
             "POST",
             url,
-            fields=fields,
-            headers={"Authorization": f"Bearer {self.dsn.token}"},
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.dsn.token}",
+            },
         )
         if resp.status >= 400:
             logger.debug("augur heartbeat -> %s %s", resp.status, resp.data[:200])

@@ -6,6 +6,19 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-05-19
+
+### Fixed
+
+- Heartbeat POST now sends a JSON body with `Content-Type:
+  application/json`. Previously it used `urllib3`'s `fields=` kwarg,
+  which produces `multipart/form-data` — the server parsed that as an
+  empty JSON body and returned **HTTP 422 "client_id field required"**,
+  silently breaking the connection-status badge against any server
+  shipped after the JSON-only heartbeat parser landed.
+- Added `tests/test_streaming_heartbeat.py` to pin the wire format so
+  this can't regress.
+
 ## [0.1.1] — 2026-05-19
 
 ### Changed
