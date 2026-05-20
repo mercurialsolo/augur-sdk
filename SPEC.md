@@ -68,7 +68,7 @@ from augur_sdk import (
 `DebugSession` public methods:
 `attach_observation`, `record_step`, `record_event`, `set_status`,
 `add_tag`, `set_capture_mode` (since 0.1.3), `append_log` (since 0.1.3),
-`close`.
+`attach_verifier` (since 0.1.5), `close`.
 
 ### Models (`augur_sdk.models`)
 
@@ -188,6 +188,52 @@ configured `Store`. With streaming enabled, the SDK POSTs to
 chunk to `logs/<name>.log` (or `logs/step-<idx>.log` when
 `step_index` is set).
 
+### 4.13 `attach_verifier` post-hoc verdict (since 0.1.5)
+
+`DebugSession.attach_verifier(step_index, status=…, …)` MUST replace
+the target step's `verdict` field in-place. The previous verdict is
+discarded — precedence is documented as
+`native verdict > attach_verifier > inferred default`, i.e. an
+external harness opting in to `attach_verifier` is asserting authority
+over the producer's classification. When streaming is enabled, the
+SDK MUST echo the patched step through the live sink (so viewers see
+the updated verdict without waiting for `close()`); when streaming is
+off, the patched verdict is written to disk on `close()`. Raises
+`ValueError` if no step exists at `step_index`.
+
+### 4.14 Training-data substrate schemas (since 0.1.6)
+
+The vendored JSON Schemas gain four additive surfaces so a single
+bundle can serve both debugging and SFT/DPO/RL training pipelines:
+
+- `modelio.schema.json` (new short name `modelio`): canonical
+  one-model-call record (`request`, `response`, `usage`,
+  `prompt_hash`, …). Producers MUST write these under
+  `<bundle>/modelio/<step_index:04d>-<layer>-<seq>.json` when
+  `capture_mode` is `model_io` or `full`; lower modes MAY omit the
+  directory entirely.
+- `step_trace.costs` + `step_trace.latency` (optional): per-step
+  token counts, USD breakdown, and per-layer wall-clock.
+- `debug_session.costs` (optional): session-level rollup of the above.
+- `verdict.{score, score_components, comparator}` (optional):
+  continuous reward signal (0..1) alongside the categorical
+  `status`. Default mapping when `score` is absent:
+  `passed → 1.0`, `recoverable → 0.5`, `failed|skipped|unknown → 0.0`.
+- `preference.schema.json` (new short name `preference`): DPO /
+  RLHF preference record stored at
+  `<bundle>/preferences/<step_index:04d>.json`. Decoupled from
+  the immutable trace so raters MAY add comparisons after the
+  run completes; the schema requires `preferred_action` +
+  `alternatives[]` (each with an `action` and optional
+  `reward_estimate`) and accepts a `comparator` of
+  `verifier | model-judge | human-rater | replay-diff`.
+
+Every field is additive and optional; all 0.1.x bundles produced by
+prior SDK versions continue to validate. Producer-side helpers
+(`attach_costs`, `attach_score`, `record_modelio`) ship in 0.2.0;
+until then, adapters MAY populate the new fields directly on the
+`StepTrace` dict they pass to `record_step()`.
+
 ## 5. Version policy
 
 - The SDK follows semver per `MAJOR.MINOR.PATCH`.
@@ -215,7 +261,7 @@ The SDK does not:
 ## 7. Status
 
 - **Schema version**: `0.1`
-- **SDK version**: `0.1.3`
+- **SDK version**: `0.1.6`
 - **Supported Python**: 3.11, 3.12, 3.13
 - **Runtime deps**: `jsonschema`, `referencing`, `urllib3`
 

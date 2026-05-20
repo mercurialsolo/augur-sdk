@@ -77,6 +77,18 @@ def set_capture_mode(mode: str | CaptureMode) -> None: ...
 
 # Stream a runner-log chunk to the server (since 0.1.3)
 def append_log(text: str, *, step_index: int | None = None, name: str = "run") -> None: ...
+
+# Add a post-hoc verdict to a previously-recorded step (since 0.1.5)
+def attach_verifier(
+    step_index: int,
+    *,
+    status: str,
+    reason: str | None = None,
+    check: str | None = None,
+    expected: Any = None,
+    actual: Any = None,
+    evidence_refs: list[str] | None = None,
+) -> None: ...
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -90,6 +102,19 @@ wins over the override. Use it to upgrade from `metadata` to
 without it, to `logs/<name>.log`. No-op when streaming is disabled —
 local logs belong in the bundle's `logs/` directory written directly
 via the configured `Store`.
+
+`attach_verifier(step_index, status=..., ...)` lets an external harness
+add a post-hoc verdict to a step the producer left as `unknown` (or
+mis-classified). Useful for trace formats with no native verifier
+signal (OpenAI / Anthropic Computer-Use, raw OSWorld): run an external
+check against the step's post-state, then attach the result. Replaces
+the step's `verdict` field in-place. When `check` / `expected` /
+`actual` are given without an explicit `reason`, the SDK composes one:
+`"<check>: expected=<expected> actual=<actual>"`. With streaming
+enabled, the patched step is re-emitted to the live sink so viewers
+see the update without waiting for `close()`. Raises `ValueError`
+when no step exists at `step_index`. Precedence:
+`native verdict > attach_verifier > inferred default`.
 
 ## `CaptureMode`
 

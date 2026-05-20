@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/preference.schema.json",
+  "title": "Preference",
+  "description": "Preference / counterfactual record for DPO + RLHF training data (closes #57). Stored at `preferences/<step_index:04d>.json` (one file per step that has preference data). Decoupled from the immutable trace so preferences can accumulate over time — a human rater may add comparisons days after the run completes.",
+  "type": "object",
+  "required": ["preference_id", "step_id", "preferred_action", "alternatives"],
+  "additionalProperties": false,
+  "properties": {
+    "preference_id": {
+      "type": "string",
+      "description": "Globally unique. Convention: `<run_id>/preference/<step_index:04d>` or `<run_id>/preference/<step_index:04d>-<seq>` when multiple preference records exist for one step."
+    },
+    "step_id": {
+      "type": "string",
+      "description": "Step this preference is about. MUST match an existing step_id in the run's trace.json."
+    },
+    "preferred_action": {
+      "type": "object",
+      "description": "The action the comparator picked as best. Shape matches `step.action` from step_trace.schema.json so downstream pipelines can treat it identically.",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {"type": "string"},
+        "params": {"type": "object", "additionalProperties": true},
+        "coordinate_space": {"$ref": "coordinate_space.schema.json"},
+        "dispatch_backend": {"type": "string"}
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One or more alternative actions that were considered but not preferred. Each alternative MAY carry a `reward_estimate` (0..1) for ranked DPO; minimum requirement is the action shape.",
+      "items": {
+        "type": "object",
+        "required": ["action"],
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "object",
+            "required": ["type"],
+            "additionalProperties": true,
+            "properties": {
+              "type": {"type": "string"},
+              "params": {"type": "object", "additionalProperties": true},
+              "coordinate_space": {"$ref": "coordinate_space.schema.json"},
+              "dispatch_backend": {"type": "string"}
+            }
+          },
+          "reward_estimate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Optional ranking signal in [0,1]. preferred_action is implicitly 1.0; alternatives carry their own estimate for ranked DPO."
+          },
+          "source_run_id": {
+            "type": "string",
+            "description": "When this alternative came from a replay run against the same observation, the replay's run_id. Lets training pipelines trace counterfactuals back to their origin."
+          }
+        }
+      }
+    },
+    "comparator": {
+      "type": "string",
+      "enum": ["verifier", "model-judge", "human-rater", "replay-diff"],
+      "description": "Who decided the preference. `verifier` = automated check, `model-judge` = LLM rater, `human-rater` = manual annotation, `replay-diff` = derived from the replay workbench's verdict (#30/#33)."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Comparator's own confidence in the preference. For human raters this MAY be omitted or set to 1.0; for model-judges it SHOULD reflect the underlying log-prob margin."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the preference record was written (NOT when the run happened)."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form context the rater wants to attach. Optional."
+    }
+  }
+}

@@ -34,6 +34,12 @@ viewer, CLI, and coding agents read bundles without configuration.
     ...
   replay/
     0011_fixture.json                # replay fixtures (capture_mode=replay or full)
+  modelio/
+    0000-planner-0.json              # one ModelIORecord per call (since 0.1.6)
+    0000-grounding-0.json             #   <step:04d>-<layer>-<seq>.json
+    0011-verifier-0.json             # capture_mode=model_io or full
+  preferences/
+    0011.json                        # DPO / RLHF preference record (since 0.1.6)
 ```
 
 ## Why path-stable

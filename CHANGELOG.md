@@ -26,6 +26,14 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
   stays the canonical pass/fail bucket; score is additive for
   RL/SFT pipelines needing partial credit. Closes upstream
   augur#59.
+- **`preference.schema.json`** (new): preference / counterfactual
+  record for DPO + RLHF training data. Stored at
+  `preferences/<step_index:04d>.json`, decoupled from the
+  immutable trace so a human rater can add comparisons days
+  after the run completes. Captures `preferred_action`, ranked
+  `alternatives` with optional `reward_estimate`, and the
+  `comparator` (verifier | model-judge | human-rater |
+  replay-diff). Closes upstream augur#57.
 
 All additions are optional + additive. Every 0.1.x bundle still
 validates.

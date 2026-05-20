@@ -53,6 +53,7 @@ augur diagnose /path/to/bundle --rules cua --fail-on high
 | `cua.repeated_action_stable_frame` | medium  | Two clicks at the same coord with no state change         |
 | `cua.click_outside_viewport`     | high     | Action coord outside the viewport (DSF / space mismatch)   |
 | `cua.coordinate_space_mismatch`  | high     | Grounding provenance=dom + action in viewport_css_px       |
+| `cua.dom_used_as_runtime_target` | high     | grounding.provenance=dom + action.params carries numeric x/y |
 | `cua.no_state_change`            | medium   | failure_class=no_state_change OR verdict==recoverable      |
 | `cua.verifier_disagrees`         | high     | Verifier failed AND a verifier event exists for the step   |
 | `cua.dispatch_ok_state_fail`     | high     | Dispatch reported success but post-state didn't change     |
