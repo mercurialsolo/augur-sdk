@@ -339,6 +339,38 @@ def high_cost_infra_failure(ctx: BundleContext, r: RuleResult) -> None:
             )
 
 
+@rule("cua.uncategorized_failure", severity="low")
+def uncategorized_failure(ctx: BundleContext, r: RuleResult) -> None:
+    """A step failed but its `failure_class` is missing or the literal
+    string "unknown" — the producer's classifier didn't match any
+    rule. Useful for adapter authors to spot gaps in their failure
+    taxonomy. Not a runtime bug; surfaces as low-severity hygiene."""
+    for step in ctx.steps:
+        if step.get("status") != "failed":
+            continue
+        fc = step.get("failure_class")
+        if fc and fc != "unknown":
+            continue
+        idx = step["step_index"]
+        intent = step.get("intent") or "(no intent)"
+        r.emit(
+            rule_id=uncategorized_failure.rule_id,
+            severity=uncategorized_failure.severity,
+            summary=(
+                f"Step {idx} failed but `failure_class` is "
+                f"{fc!r} — the producer's classifier didn't catch this case."
+            ),
+            evidence=[_step_evidence(step)],
+            step_index=idx,
+            recommendation=(
+                f"Inspect step {idx} ({intent!r}) and the verdict.reason "
+                f"to identify the failure pattern, then extend the producer's "
+                f"classify() rules. See docs/failure-class-taxonomy.md for the "
+                f"canonical vocabulary."
+            ),
+        )
+
+
 CUA_RULES: list[Rule] = [
     repeated_action_stable_frame,
     click_outside_viewport,
@@ -350,4 +382,5 @@ CUA_RULES: list[Rule] = [
     missing_observation,
     replay_diff,
     high_cost_infra_failure,
+    uncategorized_failure,
 ]

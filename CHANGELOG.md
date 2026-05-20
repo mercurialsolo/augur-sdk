@@ -6,6 +6,17 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-05-19
+
+### Added
+
+- New `cua.uncategorized_failure` diagnostic rule (severity: low).
+  Fires when a step has `status: "failed"` but `failure_class` is
+  empty or the literal `"unknown"` — the producer's classifier
+  didn't match any rule. Surfaces as hygiene feedback to adapter
+  authors; the recommendation points at the step's intent + the
+  verdict.reason so a maintainer can extend the classify() rules.
+
 ## [0.1.3] — 2026-05-20
 
 ### Added
