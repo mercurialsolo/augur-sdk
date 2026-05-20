@@ -64,6 +64,20 @@
       "type": "object",
       "additionalProperties": {"type": "string"},
       "description": "Free-form key/value tags (tenant, environment, plan signature, etc.)."
+    },
+    "costs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Run-level cost rollup. Producers MAY also stamp `cost_usd` as a string in `tags` for back-compat with the runs-list display path; servers/viewers prefer this structured form when present. Closes #58.",
+      "properties": {
+        "total_usd":        {"type": "number", "minimum": 0},
+        "model_usd":        {"type": "number", "minimum": 0},
+        "gpu_usd":          {"type": "number", "minimum": 0},
+        "proxy_usd":        {"type": "number", "minimum": 0},
+        "tokens_in":        {"type": "integer", "minimum": 0},
+        "tokens_out":       {"type": "integer", "minimum": 0},
+        "cache_hit_tokens": {"type": "integer", "minimum": 0}
+      }
     }
   }
 }

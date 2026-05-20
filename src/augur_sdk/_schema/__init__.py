@@ -31,6 +31,7 @@ _SCHEMA_FILES: dict[str, str] = {
     "observation": "observation.schema.json",
     "decision_event": "decision_event.schema.json",
     "replay_fixture": "replay_fixture.schema.json",
+    "modelio": "modelio.schema.json",
     "diagnostic_finding": "diagnostic_finding.schema.json",
     "coordinate_space": "coordinate_space.schema.json",
     "provenance": "provenance.schema.json",

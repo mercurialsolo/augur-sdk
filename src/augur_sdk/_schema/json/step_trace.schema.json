@@ -36,11 +36,38 @@
     "failure_class": {"$ref": "failure_class.schema.json"},
     "capture_mode": {
       "$ref": "capture_mode.schema.json",
-      "description": "Optional per-step override of manifest.capture_mode. Producers MAY change the active capture mode mid-run (e.g. start in `metadata`, upgrade to `screenshots` after the first failed verifier check). When present, this is the mode in effect for THIS step's artifacts. Consumers MUST treat absence as 'inherits the manifest mode'. Closes augur#36."
+      "description": "Optional per-step override of manifest.capture_mode. Producers MAY change the active capture mode mid-run (e.g. start in `metadata`, upgrade to `screenshots` after the first failed verifier check). When present, this is the mode in effect for THIS step's artifacts. Consumers MUST treat absence as 'inherits the manifest mode'. Closes #36."
     },
     "started_at": {"type": "string", "format": "date-time"},
     "ended_at": {"type": ["string", "null"], "format": "date-time"},
     "duration_ms": {"type": ["integer", "null"], "minimum": 0},
+    "costs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-step cost breakdown for training-data hygiene. All fields optional; absence means the producer didn't measure that dimension. Sum of components SHOULD equal total_usd within float tolerance. Closes #58.",
+      "properties": {
+        "total_usd":        {"type": "number", "minimum": 0},
+        "model_usd":        {"type": "number", "minimum": 0},
+        "gpu_usd":          {"type": "number", "minimum": 0},
+        "proxy_usd":        {"type": "number", "minimum": 0},
+        "tokens_in":        {"type": "integer", "minimum": 0},
+        "tokens_out":       {"type": "integer", "minimum": 0},
+        "cache_hit_tokens": {"type": "integer", "minimum": 0}
+      }
+    },
+    "latency": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-step, per-layer latency budget. Closes #58.",
+      "properties": {
+        "planner_ms":   {"type": "integer", "minimum": 0},
+        "grounding_ms": {"type": "integer", "minimum": 0},
+        "dispatch_ms":  {"type": "integer", "minimum": 0},
+        "verifier_ms":  {"type": "integer", "minimum": 0},
+        "recovery_ms":  {"type": "integer", "minimum": 0},
+        "total_ms":     {"type": "integer", "minimum": 0}
+      }
+    },
     "observation_pre": {
       "type": ["string", "null"],
       "description": "Bundle-relative path to the pre-action observation artifact (PNG). Or null if not captured."
@@ -97,6 +124,22 @@
         "evidence_refs": {
           "type": "array",
           "items": {"type": "string"}
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Continuous reward signal (0..1). The status enum stays the canonical pass/fail bucket; score is additive metadata for RL/SFT pipelines that need partial credit. Default mapping when absent: passed→1.0, recoverable→0.5, failed/skipped/unknown→0.0. Closes #59."
+        },
+        "score_components": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Optional breakdown of `score` into named contributions (e.g. grounding_accuracy, verifier_confidence, state_change_observed). Schema-free so adapters can extend per-domain."
+        },
+        "comparator": {
+          "type": "string",
+          "enum": ["verifier", "model-judge", "exact-match", "human"],
+          "description": "Who produced `score`. `verifier` = the producer's automated check, `model-judge` = an external LLM rater, `exact-match` = deterministic string/coord compare, `human` = manual annotation."
         }
       }
     },

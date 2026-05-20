@@ -6,6 +6,30 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.6] — 2026-05-20
+
+### Added — training-data substrate schemas (mirrors upstream augur 0.1.2 schema)
+
+- **`modelio.schema.json`** (new): canonical record for one model
+  call's full input + output. Loaded under short name `modelio`.
+  Pinned shape lets downstream SFT/DPO pipelines harvest training
+  data from any compliant producer without adapter-specific parsers.
+  Closes upstream augur#56.
+- `step_trace.schema.json`: new optional `costs` and `latency`
+  objects on each step (token counts, USD breakdown, per-layer ms).
+  Closes part of upstream augur#58.
+- `debug_session.schema.json`: new optional `costs` rollup on the
+  session. Closes the rest of upstream augur#58.
+- `step_trace.schema.json` → `verdict`: new optional `score`
+  (0..1), `score_components`, `comparator` enum
+  (verifier|model-judge|exact-match|human). The `status` enum
+  stays the canonical pass/fail bucket; score is additive for
+  RL/SFT pipelines needing partial credit. Closes upstream
+  augur#59.
+
+All additions are optional + additive. Every 0.1.x bundle still
+validates.
+
 ## [0.1.5] — 2026-05-20
 
 ### Added
