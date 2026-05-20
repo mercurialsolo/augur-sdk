@@ -2,6 +2,8 @@ name: Deploy docs
 
 on:
   push:
+    tags:
+      - "v*"
     branches: [main]
     paths:
       - "docs/**"
@@ -12,22 +14,31 @@ on:
       - "uv.lock"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label (e.g. 0.1.7). Defaults to __version__ from src/augur_sdk/_version.py."
+        required: false
+        default: ""
+      alias:
+        description: "Alias to update (e.g. latest, dev). Empty = none."
+        required: false
+        default: "latest"
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write   # mike pushes to gh-pages
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build MkDocs site
+  deploy:
+    name: Deploy versioned docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # mike needs full history of gh-pages
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -40,20 +51,45 @@ jobs:
       - name: Sync docs deps
         run: uv sync --frozen --group docs
 
-      - name: Build site
-        run: uv run mkdocs build --strict
+      - name: Configure git for mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
+      - name: Resolve version + alias
+        id: ver
+        run: |
+          REF="${GITHUB_REF}"
+          if [[ "$REF" == refs/tags/v* ]]; then
+            echo "version=${REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+            echo "alias=latest"               >> "$GITHUB_OUTPUT"
+            echo "mode=release"               >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            V="${{ inputs.version }}"
+            if [[ -z "$V" ]]; then
+              V=$(uv run python -c "from augur_sdk._version import __version__; print(__version__)")
+            fi
+            echo "version=$V"               >> "$GITHUB_OUTPUT"
+            echo "alias=${{ inputs.alias }}" >> "$GITHUB_OUTPUT"
+            echo "mode=manual"              >> "$GITHUB_OUTPUT"
+          else
+            # main push, not a tag — track unreleased work under `dev`
+            echo "version=dev"  >> "$GITHUB_OUTPUT"
+            echo "alias="        >> "$GITHUB_OUTPUT"
+            echo "mode=dev"      >> "$GITHUB_OUTPUT"
+          fi
 
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy ${{ steps.ver.outputs.version }} (alias=${{ steps.ver.outputs.alias }})
+        run: |
+          set -eux
+          VERSION="${{ steps.ver.outputs.version }}"
+          ALIAS="${{ steps.ver.outputs.alias }}"
+          if [[ -n "$ALIAS" ]]; then
+            uv run mike deploy --push --update-aliases "$VERSION" "$ALIAS"
+          else
+            uv run mike deploy --push "$VERSION"
+          fi
+
+      - name: Pin default to `latest` on release
+        if: steps.ver.outputs.mode == 'release' || steps.ver.outputs.alias == 'latest'
+        run: uv run mike set-default --push latest

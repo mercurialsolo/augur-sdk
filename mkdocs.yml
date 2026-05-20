@@ -59,6 +59,11 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.snippets
 
+extra:
+  version:
+    provider: mike
+    default: latest
+
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
