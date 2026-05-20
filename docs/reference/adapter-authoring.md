@@ -41,6 +41,49 @@ class MyOrgAdapter:
         return Path(output_dir).resolve()
 ```
 
+## Shortcut: message-log adapters (since 0.1.7)
+
+OpenAI Responses, Anthropic Messages, and similar message-log-based
+CUAs share ~80% of the adapter pattern: walk a message log, find tool
+calls, emit one StepTrace per tool call, attach sidecar screenshots.
+Subclass `ModelApiAdapterBase` and you implement *two* methods
+instead of the whole `bundle_from_input` flow:
+
+```python
+from collections.abc import Iterator
+from typing import Any
+from augur_sdk import ModelApiAdapterBase
+
+class OpenAICuaAdapter(ModelApiAdapterBase):
+    name = "openai-cua"
+
+    def iter_tool_calls(
+        self, messages: list[dict[str, Any]]
+    ) -> Iterator[tuple[int, int, dict[str, Any]]]:
+        for turn_idx, msg in enumerate(messages):
+            if msg.get("role") != "assistant":
+                continue
+            for tc_idx, tc in enumerate(msg.get("tool_calls", [])):
+                if tc.get("type") != "computer_use_preview":
+                    continue
+                yield (turn_idx, tc_idx, self._action_from_tc(tc))
+
+    def grounding_provider(self) -> str:
+        return "openai.computer_use_preview"
+```
+
+`bundle_from_input(input_path, output_dir, *, screens_dir=None,
+run_id=None)` is inherited. Sidecar screenshots are auto-resolved
+from `<input_path.parent>/screens/<step_index:04d>_{pre,post}.png`
+(override `screenshot_filename_template` or `find_screenshot` per
+provider). Steps land with `verdict={"status": "unknown", ...}` —
+external harnesses can refine via `DebugSession.attach_verifier`
+once an authoritative check is available.
+
+Override `load_messages(path)` when your input isn't a single JSON
+file with `{"messages": [...], "metadata": {...}}` shape (e.g.
+conversation `.jsonl`, separate metadata file).
+
 ## Register via entry points
 
 ```toml

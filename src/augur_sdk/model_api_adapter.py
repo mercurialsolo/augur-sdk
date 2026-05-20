@@ -142,10 +142,11 @@ class ModelApiAdapterBase:
             messages_file = candidates[0]
         else:
             messages_file = input_path
-        if screens_dir is None:
-            screens_dir = messages_file.parent / "screens"
-        else:
-            screens_dir = Path(screens_dir)
+        screens_dir = (
+            messages_file.parent / "screens"
+            if screens_dir is None
+            else Path(screens_dir)
+        )
 
         messages, metadata = self.load_messages(messages_file)
         resolved_run_id = (
@@ -164,7 +165,7 @@ class ModelApiAdapterBase:
             tags={"adapter": self.name, **(metadata.get("tags") or {})},
             started_at=metadata.get("started_at"),
         ) as session:
-            for step_index, (turn_idx, tc_idx, action) in enumerate(
+            for step_index, (turn_idx, _tc_idx, action) in enumerate(
                 self.iter_tool_calls(messages)
             ):
                 pre_path = self.find_screenshot(screens_dir, step_index, "pre")

@@ -61,6 +61,7 @@ from augur_sdk import (
     DefaultRedactionPolicy, RedactionPolicy, DEFAULT_POLICY_ID,
     LocalFSStore, S3Store, Store,
     Adapter,
+    ModelApiAdapterBase,  # since 0.1.7
     SUPPORTED_SCHEMA_RANGE, __version__,
 )
 ```
@@ -234,6 +235,34 @@ prior SDK versions continue to validate. Producer-side helpers
 until then, adapters MAY populate the new fields directly on the
 `StepTrace` dict they pass to `record_step()`.
 
+### 4.15 `ModelApiAdapterBase` scaffolding (since 0.1.7)
+
+`augur_sdk.ModelApiAdapterBase` is shared scaffolding for adapters
+whose native format is a message log (OpenAI Responses, Anthropic
+Messages, similar). The base provides
+`bundle_from_input(input_path, output_dir, *, screens_dir=None, run_id=None)`
+— the canonical entry point the `augur.adapters` group looks for —
+and resolves it through two subclass hooks:
+
+- `iter_tool_calls(messages) -> Iterator[(turn_idx, tc_idx, action_dict)]`
+  (**MUST** override): walks the message log in dispatch order and
+  yields one canonical-shaped action per tool call.
+- `load_messages(path) -> (messages, metadata)` (default reads a
+  single JSON file with `{"messages": [...], "metadata": {...}}`):
+  override for vendor-specific layouts (jsonl, split metadata, etc.).
+
+Sidecar screenshots are looked up via `find_screenshot(screens_dir,
+step_index, kind)`; the default template is
+`{step_index:04d}_{kind}.png`. Steps the base writes default to
+`status="succeeded"` with `verdict={"status": "unknown", "reason":
+"no native verifier"}` — external harnesses MAY refine this via
+`DebugSession.attach_verifier` (§4.13).
+
+The base MUST produce a bundle that passes `validate_bundle()` for
+every conforming subclass. Reference subclasses ship in separate
+user-org packages (`augur-adapter-openai-cua`,
+`augur-adapter-anthropic-cua`) to keep this SDK vendor-free.
+
 ## 5. Version policy
 
 - The SDK follows semver per `MAJOR.MINOR.PATCH`.
@@ -261,7 +290,7 @@ The SDK does not:
 ## 7. Status
 
 - **Schema version**: `0.1`
-- **SDK version**: `0.1.6`
+- **SDK version**: `0.1.7`
 - **Supported Python**: 3.11, 3.12, 3.13
 - **Runtime deps**: `jsonschema`, `referencing`, `urllib3`
 
