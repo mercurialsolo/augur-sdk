@@ -6,6 +6,20 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.7] — 2026-05-20
+
+### Added
+
+- **`ModelApiAdapterBase`**: shared scaffolding for adapters whose
+  native format is a message log (OpenAI Responses, Anthropic
+  Messages, similar). Subclasses implement two methods —
+  `iter_tool_calls(messages)` and optionally `load_messages(path)`
+  — and inherit `bundle_from_input(input, output)` which walks the
+  log, opens a DebugSession, emits one StepTrace per tool call,
+  and resolves sidecar screenshots from a `screens/` directory.
+  Reduces the OpenAI / Anthropic Computer-Use adapter footprint
+  by ~70%. Closes upstream augur#53.
+
 ## [0.1.6] — 2026-05-20
 
 ### Added — training-data substrate schemas (mirrors upstream augur 0.1.2 schema)

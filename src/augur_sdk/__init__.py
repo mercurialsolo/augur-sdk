@@ -8,6 +8,7 @@ bundle writer are exposed here. Adapter authors should import from
 from augur_sdk._version import SUPPORTED_SCHEMA_RANGE, __version__
 from augur_sdk.adapter import Adapter
 from augur_sdk.capture import CaptureMode, resolve_capture_mode
+from augur_sdk.model_api_adapter import ModelApiAdapterBase
 from augur_sdk.models import (
     Action,
     BundleManifest,
@@ -46,6 +47,7 @@ __all__ = [
     "DiagnosticFinding",
     "Grounding",
     "LocalFSStore",
+    "ModelApiAdapterBase",
     "Observation",
     "RecoveryDecision",
     "RedactionPolicy",
