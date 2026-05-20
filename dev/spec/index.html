@@ -1371,6 +1371,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#416-training-data-producer-side-helpers-since-018" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.16 Training-data producer-side helpers (since 0.1.8)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#415-modelapiadapterbase-scaffolding-since-017" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1730,6 +1741,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#416-training-data-producer-side-helpers-since-018" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.16 Training-data producer-side helpers (since 0.1.8)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#415-modelapiadapterbase-scaffolding-since-017" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1861,7 +1883,8 @@ additive</strong> across minors post-1.0.</p>
 <p><code>DebugSession</code> public methods:
 <code>attach_observation</code>, <code>record_step</code>, <code>record_event</code>, <code>set_status</code>,
 <code>add_tag</code>, <code>set_capture_mode</code> (since 0.1.3), <code>append_log</code> (since 0.1.3),
-<code>attach_verifier</code> (since 0.1.5), <code>close</code>.</p>
+<code>attach_verifier</code> (since 0.1.5), <code>set_score</code> / <code>set_costs</code> /
+<code>set_step_costs</code> / <code>record_modelio</code> (since 0.1.8), <code>close</code>.</p>
 <h3 id="models-augur_sdkmodels">Models (<code>augur_sdk.models</code>)<a class="headerlink" href="#models-augur_sdkmodels" title="Permanent link">&para;</a></h3>
 <p>Every record type the SDK accepts or produces is a <code>TypedDict</code>:</p>
 <ul>
@@ -1992,6 +2015,39 @@ prior SDK versions continue to validate. Producer-side helpers
 (<code>attach_costs</code>, <code>attach_score</code>, <code>record_modelio</code>) ship in 0.2.0;
 until then, adapters MAY populate the new fields directly on the
 <code>StepTrace</code> dict they pass to <code>record_step()</code>.</p>
+<h3 id="416-training-data-producer-side-helpers-since-018">4.16 Training-data producer-side helpers (since 0.1.8)<a class="headerlink" href="#416-training-data-producer-side-helpers-since-018" title="Permanent link">&para;</a></h3>
+<p>The 0.1.6 schema substrate (modelio, costs, verdict.score) gains
+producer-side SDK helpers so adapters don't have to mutate session
+internals to emit the new fields:</p>
+<ul>
+<li><code>DebugSession.set_costs(...)</code> and <code>set_step_costs(step_index, ...)</code>
+  MUST be merge-on-call (later kwargs win; unset dimensions are
+  preserved). <code>set_costs</code> surfaces on <strong>both</strong> the session record
+  and the manifest (<code>manifest.json#/costs</code>); <code>set_step_costs</code>
+  patches the step's <code>costs</code> object on disk.</li>
+<li><code>DebugSession.set_score(step_index, score, *, comparator,
+  components)</code> MUST merge into the existing verdict (the
+  categorical <code>status</code> is preserved); <code>score</code> MUST be clamped to
+  <code>[0.0, 1.0]</code>; <code>comparator</code>, when set, MUST be one of
+  <code>verifier | model-judge | exact-match | human</code>. Default
+  status→score mapping for absent score remains the consumer's
+  responsibility (passed→1.0, recoverable→0.5, failed/skipped/
+  unknown→0.0).</li>
+<li><code>DebugSession.record_modelio(record, *, step_index, layer,
+  validate=True)</code> MUST validate <code>record</code> against
+  <code>modelio.schema.json</code> (Draft 2020-12) unless <code>validate=False</code>,
+  apply the session's <code>RedactionPolicy</code> before persistence (stamping
+  <code>redaction_applied: true</code>), and be <strong>idempotent on the record's
+  <code>prompt_hash</code></strong> — repeat calls with the same hash MUST return the
+  existing bundle-relative path without staging a duplicate file.
+  Path convention: <code>modelio/&lt;step_index:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json</code>
+  for step-scoped calls, <code>modelio/run-&lt;layer&gt;-&lt;seq&gt;.json</code> for
+  run-scoped (<code>step_index=None</code>); <code>&lt;seq&gt;</code> is a monotonic per-(step,
+  layer) counter starting at 0.</li>
+</ul>
+<p>Step → modelio linkage is <strong>path-based</strong>, not field-based:
+<code>step_trace.schema.json</code> carries no <code>modelio_refs</code> field. Consumers
+locate the model calls for step N by globbing <code>modelio/N*.json</code>.</p>
 <h3 id="415-modelapiadapterbase-scaffolding-since-017">4.15 <code>ModelApiAdapterBase</code> scaffolding (since 0.1.7)<a class="headerlink" href="#415-modelapiadapterbase-scaffolding-since-017" title="Permanent link">&para;</a></h3>
 <p><code>augur_sdk.ModelApiAdapterBase</code> is shared scaffolding for adapters
 whose native format is a message log (OpenAI Responses, Anthropic
@@ -2043,7 +2099,7 @@ user-org packages (<code>augur-adapter-openai-cua</code>,
 <h2 id="7-status">7. Status<a class="headerlink" href="#7-status" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Schema version</strong>: <code>0.1</code></li>
-<li><strong>SDK version</strong>: <code>0.1.7</code></li>
+<li><strong>SDK version</strong>: <code>0.1.8</code></li>
 <li><strong>Supported Python</strong>: 3.11, 3.12, 3.13</li>
 <li><strong>Runtime deps</strong>: <code>jsonschema</code>, <code>referencing</code>, <code>urllib3</code></li>
 </ul>
