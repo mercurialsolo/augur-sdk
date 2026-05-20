@@ -8,11 +8,11 @@ edit_uri: edit/main/docs/
 theme:
   name: material
   features:
-    - navigation.tabs
     - navigation.sections
     - navigation.top
     - navigation.tracking
     - navigation.indexes
+    - navigation.expand
     - content.code.copy
     - content.code.annotate
     - content.action.edit
