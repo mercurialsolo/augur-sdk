@@ -29,10 +29,14 @@ The SDK auto-detects the DSN in this order:
 2. `AUGUR_DSN` env var
 3. Neither → streaming disabled; bundle is still written to `out_dir`
 
-Each ingest call carries `Authorization: Bearer <api_key>`. The SDK also
-spawns a 15-second heartbeat thread that keeps the server's connection
-status indicator green between events. Network failures are non-fatal —
-the local bundle is always complete even if the server is unreachable.
+Each ingest call carries `Authorization: Bearer <api_key>`. The SDK
+fires one immediate `session_opened` heartbeat as soon as
+`DebugSession(dsn=…)` is constructed (so the workspace's connection
+list shows the client before the first step) and then spawns a
+15-second heartbeat thread that keeps the connection-status indicator
+green between events. Both go to `POST /api/v1/heartbeat` with a JSON
+body. Network failures are non-fatal — the local bundle is always
+complete even if the server is unreachable.
 
 ## How a DSN is issued
 

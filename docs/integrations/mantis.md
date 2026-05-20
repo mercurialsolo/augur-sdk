@@ -164,9 +164,11 @@ MANTIS_TRACE_EXPORT_DIR=/workspace/mantis-data/traces
 MANTIS_TRACE_INCLUDE_SCREENSHOTS=1
 ```
 
-That's the whole integration. The SDK heartbeats every 15 s while a run
-is open; the Augur workspace's connection-status badge turns green and
-stays green for the run.
+That's the whole integration. The SDK fires one immediate
+`session_opened` heartbeat the moment the `DebugSession` is
+constructed and then heartbeats every 15 s while the run is open; the
+Augur workspace's connection-status badge turns green as soon as the
+Mantis container imports the SDK and stays green for the run.
 
 ## Which path to pick
 

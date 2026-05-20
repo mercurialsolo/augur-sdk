@@ -40,7 +40,7 @@ Admin users can additionally set an `augur_tenant_override` cookie via
 | `PUT`  | `/api/v1/runs/{run_id}/steps/{step_index}`                      | one StepTrace record                                        |
 | `POST` | `/api/v1/runs/{run_id}/events`                                  | `{ events: DecisionEvent[], step_index?: number }`         |
 | `POST` | `/api/v1/runs/{run_id}/screenshots/{step_index}/{kind}`         | multipart form: `image=@shot.png;type=image/png`            |
-| `POST` | `/api/v1/heartbeat`                                              | form: `client_id`, `client_name?`, `client_version?`, …    |
+| `POST` | `/api/v1/heartbeat`                                              | JSON: `{client_id, client_name?, client_version?, capture_mode?, run_id?, last_event?}` |
 
 `kind ∈ {pre, post, target, diff}`.
 
@@ -98,8 +98,8 @@ curl -X POST https://augur.example/api/v1/runs/run_abc/screenshots/0/post \
 # Bare heartbeat (keep the connection badge green between events)
 curl -X POST https://augur.example/api/v1/heartbeat \
   -H "Authorization: Bearer $DSN_KEY" \
-  -F "client_id=my_client" \
-  -F "client_name=myagent"
+  -H "Content-Type: application/json" \
+  -d '{"client_id": "my_client", "client_name": "myagent"}'
 ```
 
 ## Errors
