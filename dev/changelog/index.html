@@ -1158,6 +1158,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#019-2026-05-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.9] — 2026-05-20
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.9] — 2026-05-20">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#018-2026-05-20" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1181,7 +1220,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#schema" class="md-nav__link">
+  <a href="#schema_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Schema
@@ -1343,7 +1382,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#schema_1" class="md-nav__link">
+  <a href="#schema_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Schema
@@ -1510,6 +1549,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#019-2026-05-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.9] — 2026-05-20
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.9] — 2026-05-20">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#018-2026-05-20" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1533,7 +1611,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#schema" class="md-nav__link">
+  <a href="#schema_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Schema
@@ -1695,7 +1773,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#schema_1" class="md-nav__link">
+  <a href="#schema_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Schema
@@ -1846,6 +1924,24 @@
 <a href="https://keepachangelog.com/">Keep a Changelog</a>, with semver applied per
 <code>docs/versioning.md</code> upstream (<code>MAJOR.MINOR.PATCH</code>; pre-1.0 minors may break).</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="019-2026-05-20">[0.1.9] — 2026-05-20<a class="headerlink" href="#019-2026-05-20" title="Permanent link">&para;</a></h2>
+<h3 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Vendor <code>prior_steps.schema.json</code></strong> (closes #4). The replay
+  workbench's sibling artifact <code>replay/&lt;step_index:04d&gt;.prior.json</code>
+  finally has a vendored schema in the SDK; producers can now
+  validate prior-step payloads offline via
+  <code>augur_sdk._schema.validator_for("prior_steps")</code>. Byte-identical
+  with the upstream <code>mercurialsolo/augur</code> monorepo. Surfaced during
+  the augur#55 schema v1.0 freeze review.</li>
+</ul>
+<h3 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>tests/test_prior_steps_schema.py</code> (13 tests) — required-field
+  failures, additionalProperties on the item level, action.type +
+  verdict.status / verdict.score validation, and a bundle-disk
+  round-trip alongside the existing replay fixture coverage.</li>
+</ul>
 <h2 id="018-2026-05-20">[0.1.8] — 2026-05-20<a class="headerlink" href="#018-2026-05-20" title="Permanent link">&para;</a></h2>
 <h3 id="added-producer-side-helpers-for-the-016-training-data-substrate">Added — producer-side helpers for the 0.1.6 training-data substrate<a class="headerlink" href="#added-producer-side-helpers-for-the-016-training-data-substrate" title="Permanent link">&para;</a></h3>
 <p>Closes the three open SDK issues (#1, #2, #3). Until 0.1.8 the
@@ -1882,7 +1978,7 @@ session internals to emit them.</p>
   <code>comparator</code> validated against the canonical enum
   (<code>verifier | model-judge | exact-match | human</code>). Closes #3.</li>
 </ul>
-<h3 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h3>
+<h3 id="schema_1">Schema<a class="headerlink" href="#schema_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>manifest.schema.json</code> gains optional <code>costs</code> (mirrors the
   session-level rollup) and two new path constants in <code>paths</code>:
@@ -1985,7 +2081,7 @@ validates.</p>
   <code>logs/&lt;name&gt;.log</code>. No-op when streaming is disabled
   (the bundle on disk owns local logs). Closes upstream augur#17.</li>
 </ul>
-<h3 id="schema_1">Schema<a class="headerlink" href="#schema_1" title="Permanent link">&para;</a></h3>
+<h3 id="schema_2">Schema<a class="headerlink" href="#schema_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Vendored <code>step_trace.schema.json</code> mirrors the upstream addition of
   the optional <code>capture_mode</code> field. Additive; every 0.1 bundle

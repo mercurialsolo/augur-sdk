@@ -2009,6 +2009,15 @@ bundle can serve both debugging and SFT/DPO/RL training pipelines:</p>
   <code>alternatives[]</code> (each with an <code>action</code> and optional
   <code>reward_estimate</code>) and accepts a <code>comparator</code> of
   <code>verifier | model-judge | human-rater | replay-diff</code>.</li>
+<li><code>prior_steps.schema.json</code> (new short name <code>prior_steps</code>, since
+  0.1.9): sibling of <code>replay_fixture</code> written to
+  <code>&lt;bundle&gt;/replay/&lt;step_index:04d&gt;.prior.json</code> when a fixture's
+  <code>prior_steps</code> is non-null. Compact list of the steps that
+  preceded the fixture's target — intentionally a thin subset of
+  <code>step_trace</code> (action + verdict + intent only) so the replay
+  agent sees the same context the original run had without
+  inheriting observations/costs. Resolves a gap surfaced during
+  the upstream augur#55 v1.0 freeze review.</li>
 </ul>
 <p>Every field is additive and optional; all 0.1.x bundles produced by
 prior SDK versions continue to validate. Producer-side helpers
@@ -2099,7 +2108,7 @@ user-org packages (<code>augur-adapter-openai-cua</code>,
 <h2 id="7-status">7. Status<a class="headerlink" href="#7-status" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Schema version</strong>: <code>0.1</code></li>
-<li><strong>SDK version</strong>: <code>0.1.8</code></li>
+<li><strong>SDK version</strong>: <code>0.1.9</code></li>
 <li><strong>Supported Python</strong>: 3.11, 3.12, 3.13</li>
 <li><strong>Runtime deps</strong>: <code>jsonschema</code>, <code>referencing</code>, <code>urllib3</code></li>
 </ul>

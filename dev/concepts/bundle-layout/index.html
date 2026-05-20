@@ -1398,12 +1398,13 @@ viewer, CLI, and coding agents read bundles without configuration.</p>
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    ...
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>  replay/
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>    0011_fixture.json                # replay fixtures (capture_mode=replay or full)
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>  modelio/
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>    0000-planner-0.json              # one ModelIORecord per call (since 0.1.6)
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    0000-grounding-0.json             #   &lt;step:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    0011-verifier-0.json             # capture_mode=model_io or full
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>  preferences/
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>    0011.json                        # DPO / RLHF preference record (since 0.1.6)
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    0011.prior.json                  # prior-step context for the fixture (since 0.1.9)
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>  modelio/
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    0000-planner-0.json              # one ModelIORecord per call (since 0.1.6)
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    0000-grounding-0.json             #   &lt;step:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    0011-verifier-0.json             # capture_mode=model_io or full
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>  preferences/
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    0011.json                        # DPO / RLHF preference record (since 0.1.6)
 </span></code></pre></div>
 <h2 id="why-path-stable">Why path-stable<a class="headerlink" href="#why-path-stable" title="Permanent link">&para;</a></h2>
 <p>A coding agent should not have to <em>discover</em> anything. Once it sniffs
