@@ -25,7 +25,9 @@ viewer, CLI, and coding agents read bundles without configuration.
   diagnostics/
     findings.json                    # output of `augur diagnose` (when run)
   logs/
-    runner.log                       # adapter-supplied logs (when present)
+    run.log                          # default destination for append_log(name="run")
+    runner.log                       # adapter-supplied logs (any logs/<name>.log)
+    step-0007.log                    # append_log(text, step_index=7) routes here
   schema/
     manifest.schema.json             # canonical record schemas — vendored so an
     step_trace.schema.json           #   offline agent can validate without a network
@@ -78,9 +80,8 @@ the path in `manifest.missing[]`. Consumers MUST treat that as
 
 ## Full spec
 
-The normative path/format rules live in the umbrella repo:
-
-- https://github.com/mercurialsolo/augur/blob/main/docs/bundle-layout.md
-- JSON Schemas: `<bundle>/schema/*.schema.json` (always vendored)
-- Versioning policy:
-  https://github.com/mercurialsolo/augur/blob/main/docs/versioning.md
+The normative path/format rules are split between the SDK's
+[SPEC.md](../spec.md) (producer behaviour) and the vendored JSON
+Schemas at `<bundle>/schema/*.schema.json`, which are bit-for-bit
+identical to `src/augur_sdk/_schema/json/*.schema.json` in this repo —
+that's how an offline consumer validates without a network.

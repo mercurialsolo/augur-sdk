@@ -65,6 +65,11 @@ from augur_sdk import (
 )
 ```
 
+`DebugSession` public methods:
+`attach_observation`, `record_step`, `record_event`, `set_status`,
+`add_tag`, `set_capture_mode` (since 0.1.3), `append_log` (since 0.1.3),
+`close`.
+
 ### Models (`augur_sdk.models`)
 
 Every record type the SDK accepts or produces is a `TypedDict`:
@@ -163,6 +168,26 @@ and thread spawn, when `dsn` is set) and at `DebugSession.__enter__`
 MUST be safe to call from multiple threads on the same session. The SDK
 uses an internal `threading.Lock` around the `EventRecorder`.
 
+### 4.11 Mid-run capture-mode override (since 0.1.3)
+
+`DebugSession.set_capture_mode(mode)` MUST NOT mutate the manifest's
+`capture_mode`. Instead, every subsequent `record_step` gets an
+explicit `capture_mode` field stamped on the StepTrace, per the
+optional field on `step_trace.schema.json`. A `capture_mode` already
+present on the StepTrace passed by the caller MUST NOT be overwritten.
+The override persists for the rest of the session unless changed again
+by another `set_capture_mode` call.
+
+### 4.12 `append_log` is streaming-only (since 0.1.3)
+
+`DebugSession.append_log(text, …)` MUST be a no-op when streaming is
+disabled — the bundle on disk is the source of truth for local logs,
+and producers that want them write to `logs/` directly via the
+configured `Store`. With streaming enabled, the SDK POSTs to
+`/api/v1/runs/<run_id>/logs` with a JSON body; the server routes the
+chunk to `logs/<name>.log` (or `logs/step-<idx>.log` when
+`step_index` is set).
+
 ## 5. Version policy
 
 - The SDK follows semver per `MAJOR.MINOR.PATCH`.
@@ -190,7 +215,7 @@ The SDK does not:
 ## 7. Status
 
 - **Schema version**: `0.1`
-- **SDK version**: `0.1.0`
+- **SDK version**: `0.1.3`
 - **Supported Python**: 3.11, 3.12, 3.13
 - **Runtime deps**: `jsonschema`, `referencing`, `urllib3`
 

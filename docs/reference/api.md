@@ -63,6 +63,34 @@ class DebugSession:
 - If an exception bubbles up through the `with` block, the run is marked
   `halted` automatically.
 
+### Methods
+
+```python
+def attach_observation(*, step_index: int, kind: str, png_bytes: bytes) -> str: ...
+def record_step(step: StepTrace) -> None: ...
+def record_event(event: DecisionEvent) -> None: ...
+def set_status(status: str) -> None: ...
+def add_tag(key: str, value: str) -> None: ...
+
+# Mid-run capture-mode override (since 0.1.3)
+def set_capture_mode(mode: str | CaptureMode) -> None: ...
+
+# Stream a runner-log chunk to the server (since 0.1.3)
+def append_log(text: str, *, step_index: int | None = None, name: str = "run") -> None: ...
+```
+
+`set_capture_mode(mode)` stamps `capture_mode` on every subsequent
+`record_step` until cleared. The manifest's `capture_mode` remains the
+default; an explicit `step["capture_mode"]` set by the caller always
+wins over the override. Use it to upgrade from `metadata` to
+`screenshots` after a failed verifier without restarting the session.
+
+`append_log(text, ...)` POSTs to `/api/v1/runs/<run_id>/logs`. With
+`step_index` set, the server routes the chunk to `logs/step-<idx>.log`;
+without it, to `logs/<name>.log`. No-op when streaming is disabled —
+local logs belong in the bundle's `logs/` directory written directly
+via the configured `Store`.
+
 ## `CaptureMode`
 
 ```python

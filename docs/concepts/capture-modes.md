@@ -40,6 +40,27 @@ DebugSession(capture_mode=CaptureMode.FULL, ...)
 # 3. Default — off
 ```
 
+## Mid-run upgrade (since 0.1.3)
+
+A run can start cheap and upgrade itself. `session.set_capture_mode(...)`
+stamps an explicit `capture_mode` field on every subsequent
+`record_step`, per the optional `capture_mode` field on
+`step_trace.schema.json`. The manifest's mode is unchanged; consumers
+see the override on the steps that carry it and inherit the manifest
+mode on the rest.
+
+```python
+with DebugSession(capture_mode=CaptureMode.METADATA, ...) as session:
+    for step in runner.run():
+        session.record_step(...)
+        if step.verifier_failed:
+            # Upgrade so the next steps capture screenshots too.
+            session.set_capture_mode("screenshots")
+```
+
+If the caller has already set `capture_mode` on the StepTrace dict, the
+override does not clobber it.
+
 ## Recommended deployments
 
 - **Always-on fleet observability**: `metadata` or `trace`. Free disk + bandwidth.
