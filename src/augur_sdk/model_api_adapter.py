@@ -47,10 +47,10 @@ import json
 from abc import abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from augur_sdk.capture import CaptureMode
-from augur_sdk.models import StepTrace
+from augur_sdk.models import Action, StepTrace
 from augur_sdk.session import DebugSession
 
 
@@ -198,7 +198,7 @@ class ModelApiAdapterBase:
                     "started_at": metadata.get("started_at", ""),
                     "observation_pre": pre_ref,
                     "observation_post": post_ref,
-                    "action": action,
+                    "action": cast(Action, action),
                     "grounding": {
                         "provider": self.grounding_provider(),
                         "provenance": "screenshot",
