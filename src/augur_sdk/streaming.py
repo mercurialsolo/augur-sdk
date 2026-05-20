@@ -82,6 +82,13 @@ class StreamingSink:
         self._heartbeat_thread: threading.Thread | None = None
         self._run_id: str | None = None
         self._capture_mode: str = "off"
+        # Fire an immediate "session_opened" heartbeat so the server's
+        # connection list shows this client the moment the SDK is wired
+        # up — before any step/event has been recorded. Without this, a
+        # user who configures AUGUR_DSN but hasn't started their agent
+        # loop yet sees a stale "no clients connected" badge in the
+        # viewer. The periodic loop still starts later in begin().
+        self._spawn(lambda: self._send_heartbeat(last_event="session_opened"))
 
     # ── lifecycle ──────────────────────────────────────────────────────────
 
@@ -176,7 +183,7 @@ class StreamingSink:
             if self._heartbeat_stop.wait(timeout=15.0):
                 return
 
-    def _send_heartbeat(self) -> None:
+    def _send_heartbeat(self, *, last_event: str | None = None) -> None:
         url = self.dsn.base_url + "/heartbeat"
         fields: dict[str, Any] = {
             "client_id": self.client_id,
@@ -186,6 +193,8 @@ class StreamingSink:
         }
         if self._run_id:
             fields["run_id"] = self._run_id
+        if last_event:
+            fields["last_event"] = last_event
         resp = self._http.request(
             "POST",
             url,

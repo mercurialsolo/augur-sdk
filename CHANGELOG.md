@@ -6,6 +6,25 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-05-19
+
+### Changed
+
+- `StreamingSink` now fires one immediate `session_opened` heartbeat
+  at construction time (i.e. on `DebugSession(dsn=…)`), so the
+  workspace's connection list shows the client before the first step
+  is recorded. The periodic 15 s heartbeat loop continues to start at
+  `__enter__` as before.
+- Heartbeat payload gains an optional `last_event` field used by the
+  initial fire. Existing servers ignore unknown fields; no client or
+  server upgrade required.
+
+### Spec
+
+- §4.4 now documents the initial-fire requirement.
+- §4.9 now reflects that side effects begin at `DebugSession(...)`
+  construction when `dsn` is configured, not at `__enter__`.
+
 ## [0.1.0] — 2026-05-19
 
 Initial standalone release.

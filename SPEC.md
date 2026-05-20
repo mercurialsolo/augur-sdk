@@ -119,9 +119,13 @@ firewall rule.
 
 ### 4.4 Heartbeat cadence
 
-When `dsn` is configured and a session is open, the SDK MUST heartbeat
-the server at intervals of **15 seconds ± 1 s**. Operators set the
-server's heartbeat window via `AUGUR_HEARTBEAT_WINDOW_S` (default 60 s).
+When `dsn` is configured, the SDK MUST emit one initial
+`session_opened` heartbeat as soon as the `StreamingSink` is constructed
+(i.e. on `DebugSession(dsn=…)`), so the server's connection list shows
+the client before any step has been recorded. While the session is
+open, the SDK then heartbeats at intervals of **15 seconds ± 1 s**.
+Operators set the server's heartbeat window via
+`AUGUR_HEARTBEAT_WINDOW_S` (default 60 s).
 
 ### 4.5 No reads from the server during a run
 
@@ -148,8 +152,10 @@ Every file in a bundle is at a path predictable from the step index
 
 ### 4.9 No side-effecting imports
 
-`import augur_sdk` MUST NOT open files, sockets, or threads. The first
-side effect happens inside `DebugSession.__enter__`.
+`import augur_sdk` MUST NOT open files, sockets, or threads. Side
+effects begin at `DebugSession(...)` construction (network heartbeat
+and thread spawn, when `dsn` is set) and at `DebugSession.__enter__`
+(bundle directory creation, periodic heartbeat loop).
 
 ### 4.10 Thread safety
 
