@@ -992,6 +992,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#0110-2026-05-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.10] — 2026-05-21
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.10] — 2026-05-21">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#019-2026-05-20" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1015,7 +1054,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
+  <a href="#tests_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Tests
@@ -1383,6 +1422,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#0110-2026-05-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.10] — 2026-05-21
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.10] — 2026-05-21">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#019-2026-05-20" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1406,7 +1484,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
+  <a href="#tests_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Tests
@@ -1758,6 +1836,28 @@
 <a href="https://keepachangelog.com/">Keep a Changelog</a>, with semver applied per
 <code>docs/versioning.md</code> upstream (<code>MAJOR.MINOR.PATCH</code>; pre-1.0 minors may break).</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="0110-2026-05-21">[0.1.10] — 2026-05-21<a class="headerlink" href="#0110-2026-05-21" title="Permanent link">&para;</a></h2>
+<h3 id="streaming">Streaming<a class="headerlink" href="#streaming" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>StreamingSink.post_modelio()</code></strong> (closes #5). When a streaming
+  sink is attached, each <code>DebugSession.record_modelio()</code> call now
+  fires the staged record live to the server's per-tenant ingest
+  route at <code>POST /api/v1/runs/{id}/modelio/{relpath}</code> in addition to
+  staging it for the on-close bundle. If the server returns 403 (the
+  tenant hasn't opted in), the SDK latches <code>_modelio_disabled</code> and
+  stops trying for the rest of the session — the local bundle is
+  unaffected and bundle-only consumers see no regression. Paired with
+  the upstream server route (mercurialsolo/augur#62).</li>
+</ul>
+<h3 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>tests/test_streaming_modelio.py</code> (3 tests) — wire format on the
+  modelio route, 403 → latch behaviour, and the negative case where
+  non-403 errors don't disable streaming.</li>
+<li><code>tests/test_record_modelio.py</code> — extended with a sink-wiring case
+  that asserts <code>post_modelio()</code> is called with the recorder's
+  reserved relpath and the post-redaction payload.</li>
+</ul>
 <h2 id="019-2026-05-20">[0.1.9] — 2026-05-20<a class="headerlink" href="#019-2026-05-20" title="Permanent link">&para;</a></h2>
 <h3 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1769,7 +1869,7 @@
   with the upstream <code>mercurialsolo/augur</code> monorepo. Surfaced during
   the augur#55 schema v1.0 freeze review.</li>
 </ul>
-<h3 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h3>
+<h3 id="tests_1">Tests<a class="headerlink" href="#tests_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>tests/test_prior_steps_schema.py</code> (13 tests) — required-field
   failures, additionalProperties on the item level, action.type +
