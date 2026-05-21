@@ -451,11 +451,14 @@ class DebugSession:
         relpath = self._recorder.reserve_modelio_path(
             step_index=step_index, layer=str(path_layer)
         )
+        staged = redacted if isinstance(redacted, dict) else rec
         self._recorder.stage_modelio(
             relpath,
-            redacted if isinstance(redacted, dict) else rec,
+            staged,
             prompt_hash=prompt_hash if isinstance(prompt_hash, str) else None,
         )
+        if self._stream is not None:
+            self._stream.post_modelio(relpath, dict(staged))
         return relpath
 
     def append_log(

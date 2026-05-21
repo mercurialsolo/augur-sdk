@@ -82,6 +82,10 @@ class StreamingSink:
         self._heartbeat_thread: threading.Thread | None = None
         self._run_id: str | None = None
         self._capture_mode: str = "off"
+        # Per-session latch: when the server returns 403 on a modelio
+        # ingest (tenant hasn't opted in), stop spamming subsequent
+        # POSTs. Local bundle persistence is unaffected.
+        self._modelio_disabled = False
         # Fire an immediate "session_opened" heartbeat so the server's
         # connection list shows this client the moment the SDK is wired
         # up — before any step/event has been recorded. Without this, a
@@ -138,6 +142,26 @@ class StreamingSink:
             )
         )
 
+    def post_modelio(self, relpath: str, record: dict[str, Any]) -> None:
+        """POST a modelio record to the server's per-tenant ingest route.
+
+        ``relpath`` is the bundle-relative path returned by the
+        recorder (e.g. ``modelio/0003-planner-0.json``) — it already
+        carries the ``modelio/`` prefix, so the URL is just
+        ``/runs/<run_id>/<relpath>`` which the server matches against
+        its ``/runs/{id}/modelio/{relpath}`` route.
+
+        Fires-and-forgets via the existing ``_spawn()`` thread. If
+        the server returns 403 (tenant hasn't enabled modelio capture),
+        we latch ``_modelio_disabled`` and skip subsequent calls for
+        the session — the bundle still gets the record on close.
+        """
+        if self._modelio_disabled:
+            return
+        run_id = self._run_id or "unknown"
+        path = f"/runs/{run_id}/{relpath}"
+        self._spawn(lambda: self._post_modelio_request(path, record))
+
     def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None:
         """Append a text chunk to the server's logs/ directory (#17).
 
@@ -178,6 +202,31 @@ class StreamingSink:
         )
         if resp.status >= 400:
             logger.debug("augur stream %s %s -> %s %s", method, path, resp.status, resp.data[:200])
+
+    def _post_modelio_request(self, path: str, payload: dict[str, Any]) -> None:
+        url = self.dsn.base_url + path
+        body = json.dumps(payload).encode("utf-8")
+        resp = self._http.request(
+            "POST",
+            url,
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.dsn.token}",
+            },
+        )
+        if resp.status == 403:
+            if not self._modelio_disabled:
+                logger.info(
+                    "augur server rejected modelio ingest (403) — tenant has not "
+                    "opted in; disabling live modelio streaming for this session"
+                )
+            self._modelio_disabled = True
+            return
+        if resp.status >= 400:
+            logger.debug(
+                "augur stream modelio %s -> %s %s", path, resp.status, resp.data[:200]
+            )
 
     def _post_multipart(self, path: str, payload: bytes) -> None:
         url = self.dsn.base_url + path

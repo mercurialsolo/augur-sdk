@@ -166,6 +166,48 @@ def test_three_call_round_trip_validates(tmp_path) -> None:
         val.validate(json.loads(f.read_text()))
 
 
+def test_sink_post_modelio_called_with_recorder_relpath(tmp_path) -> None:
+    """When a sink is attached, record_modelio fires post_modelio() with
+    the same relpath the recorder reserved (issue #5)."""
+    out = tmp_path / "bundle"
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    class FakeSink:
+        def __init__(self) -> None:
+            self._run_id: str | None = None
+
+        def begin(self, *, run_id: str, capture_mode: str) -> None:
+            self._run_id = run_id
+
+        def end(self) -> None: ...
+        def post_manifest(self, manifest: dict[str, Any]) -> None: ...
+        def put_trace(self, trace: dict[str, Any]) -> None: ...
+        def put_step(self, step: Any) -> None: ...
+        def post_events(self, events: list[Any], *, step_index: int | None) -> None: ...
+        def post_screenshot(self, step_index: int, kind: str, png_bytes: bytes) -> None: ...
+        def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None: ...
+
+        def post_modelio(self, relpath: str, record: dict[str, Any]) -> None:
+            calls.append((relpath, record))
+
+    sink = FakeSink()
+    with DebugSession(
+        run_id="run_m",
+        client_name="testclient",
+        capture_mode=CaptureMode.METADATA,
+        out_dir=out,
+    ) as s:
+        s._stream = sink  # type: ignore[assignment]
+        relpath = s.record_modelio(_minimal_modelio(layer="planner"), step_index=3)
+
+    assert relpath == "modelio/0003-planner-0.json"
+    assert len(calls) == 1
+    posted_relpath, posted_record = calls[0]
+    assert posted_relpath == relpath
+    assert posted_record["layer"] == "planner"
+    assert posted_record.get("redaction_applied") is True
+
+
 def test_redaction_applied_to_modelio_payload(tmp_path) -> None:
     out = tmp_path / "bundle"
     with DebugSession(

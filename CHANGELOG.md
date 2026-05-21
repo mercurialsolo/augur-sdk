@@ -6,6 +6,29 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.10] — 2026-05-21
+
+### Streaming
+
+- **`StreamingSink.post_modelio()`** (closes #5). When a streaming
+  sink is attached, each `DebugSession.record_modelio()` call now
+  fires the staged record live to the server's per-tenant ingest
+  route at `POST /api/v1/runs/{id}/modelio/{relpath}` in addition to
+  staging it for the on-close bundle. If the server returns 403 (the
+  tenant hasn't opted in), the SDK latches `_modelio_disabled` and
+  stops trying for the rest of the session — the local bundle is
+  unaffected and bundle-only consumers see no regression. Paired with
+  the upstream server route (mercurialsolo/augur#62).
+
+### Tests
+
+- `tests/test_streaming_modelio.py` (3 tests) — wire format on the
+  modelio route, 403 → latch behaviour, and the negative case where
+  non-403 errors don't disable streaming.
+- `tests/test_record_modelio.py` — extended with a sink-wiring case
+  that asserts `post_modelio()` is called with the recorder's
+  reserved relpath and the post-redaction payload.
+
 ## [0.1.9] — 2026-05-20
 
 ### Schema
