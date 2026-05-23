@@ -264,6 +264,26 @@ class DebugSession:
                 f"attach_verifier: no step at step_index={step_index}. "
                 f"Record the step first via record_step()."
             )
+        # #17: emit a JudgeDecision with judge_type="rule" so the
+        # provenance is preserved alongside the operative verdict.
+        # Use a stable, anonymous judge_id since attach_verifier is
+        # the legacy entry point without an explicit judge identity.
+        rule_decision: dict[str, Any] = {
+            "judge_id": check or "attach_verifier",
+            "judge_type": "rule",
+            "verdict": {"status": status},
+            "judged_at": _utcnow_iso(),
+        }
+        if composed_reason is not None:
+            rule_decision["verdict"]["reason"] = composed_reason
+        if evidence_refs is not None:
+            rule_decision["verdict"]["evidence_refs"] = list(evidence_refs)
+            rule_decision["evidence_refs"] = list(evidence_refs)
+        self._recorder.append_judge_decision(
+            step_index,
+            decision=rule_decision,
+            promote_verdict=False,
+        )
         # Echo through the streaming sink so live viewers see the
         # patched verdict without waiting for close().
         if self._stream is not None:
@@ -388,6 +408,170 @@ class DebugSession:
             if patched is not None:
                 self._stream.put_step(self.redaction_policy.apply(dict(patched)))
 
+    def record_judge_decision(
+        self,
+        step_index: int,
+        *,
+        judge_id: str,
+        judge_type: str,
+        verdict: dict[str, Any],
+        confidence: float | None = None,
+        evidence_refs: list[str] | None = None,
+        judged_at: str | None = None,
+        promote: bool = True,
+    ) -> None:
+        """Record a judge decision against a step (#17).
+
+        ``judge_type`` is one of ``rule``, ``model``, ``human``,
+        ``hybrid``. Multiple judge decisions per step are kept as a
+        sibling list to ``step.verdict``; their provenance is the value
+        of this primitive.
+
+        When ``promote`` is True (default), the supplied ``verdict``
+        becomes the operative ``step.verdict`` and ``step.verdict_source``
+        is set to ``"<judge_type>:<judge_id>"`` so consumers know which
+        judge produced the operative verdict.
+
+        Raises ``ValueError`` for unknown ``judge_type`` or when the
+        step doesn't exist.
+        """
+        self._require_open()
+        if judge_type not in ("rule", "model", "human", "hybrid"):
+            raise ValueError(
+                f"judge_type must be one of rule|model|human|hybrid, "
+                f"got {judge_type!r}"
+            )
+        decision: dict[str, Any] = {
+            "judge_id": judge_id,
+            "judge_type": judge_type,
+            "verdict": dict(verdict),
+        }
+        if confidence is not None:
+            decision["confidence"] = max(0.0, min(1.0, float(confidence)))
+        if evidence_refs is not None:
+            decision["evidence_refs"] = list(evidence_refs)
+        decision["judged_at"] = judged_at or _utcnow_iso()
+        ok = self._recorder.append_judge_decision(
+            step_index,
+            decision=decision,
+            promote_verdict=promote,
+            verdict_source=f"{judge_type}:{judge_id}" if promote else None,
+        )
+        if not ok:
+            raise ValueError(
+                f"record_judge_decision: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            redacted_decision = self.redaction_policy.apply(dict(decision))
+            if isinstance(redacted_decision, dict):
+                self._stream.post_judge_decision(step_index, redacted_decision)
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def attach_env_fingerprint(
+        self,
+        step_index: int,
+        *,
+        url_host: str | None = None,
+        url_path_template: str | None = None,
+        viewport_hash: str | None = None,
+        dom_hash: str | None = None,
+        api_shapes: dict[str, str] | None = None,
+        extensions: list[str] | None = None,
+    ) -> None:
+        """Attach a structural environment fingerprint to a step (#13).
+
+        The visual half lives on the Observation
+        (`observation.hashes.phash_64`); this is the structural half.
+        Stored side-by-side, not merged. Lets the platform's
+        determinism checker attribute drift to agent/model/env
+        independently.
+
+        SDK never derives ``dom_hash`` itself — only adapters that
+        already probe DOM for diagnostics should populate it
+        (preserves the screenshot-grounded core invariant).
+
+        Merges into ``step.env_fingerprint``; unset arguments are
+        preserved. Raises ``ValueError`` if no step exists.
+        """
+        self._require_open()
+        patch: dict[str, Any] = {}
+        for name, value in {
+            "url_host": url_host,
+            "url_path_template": url_path_template,
+            "viewport_hash": viewport_hash,
+            "dom_hash": dom_hash,
+        }.items():
+            if value is not None:
+                patch[name] = value
+        if api_shapes is not None:
+            patch["api_shapes"] = dict(api_shapes)
+        if extensions is not None:
+            patch["extensions"] = list(extensions)
+        if not patch:
+            return
+        ok = self._recorder.merge_step_env_fingerprint(
+            step_index, fingerprint=patch
+        )
+        if not ok:
+            raise ValueError(
+                f"attach_env_fingerprint: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def set_step_versions(
+        self,
+        step_index: int,
+        *,
+        model: str | None = None,
+        prompt: str | None = None,
+        prompt_hash: str | None = None,
+        tool_descriptions_hash: str | None = None,
+        code_git_sha: str | None = None,
+        grounder: str | None = None,
+        env_fingerprint_ref: str | None = None,
+    ) -> None:
+        """Stamp version axes on a previously-recorded step (#10).
+
+        Merges into ``step.captured_versions``; unset arguments are
+        preserved. Used by the platform's causal-attribution engine
+        to disentangle which input changed when an outcome moves.
+        Raises ``ValueError`` if no step exists at ``step_index``.
+        """
+        self._require_open()
+        patch: dict[str, str] = {}
+        for name, value in {
+            "model": model,
+            "prompt": prompt,
+            "prompt_hash": prompt_hash,
+            "tool_descriptions_hash": tool_descriptions_hash,
+            "code_git_sha": code_git_sha,
+            "grounder": grounder,
+            "env_fingerprint_ref": env_fingerprint_ref,
+        }.items():
+            if value is not None:
+                patch[name] = value
+        if not patch:
+            return
+        ok = self._recorder.merge_step_captured_versions(
+            step_index, versions=patch
+        )
+        if not ok:
+            raise ValueError(
+                f"set_step_versions: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
     def record_modelio(
         self,
         record: dict[str, Any],
@@ -459,7 +643,43 @@ class DebugSession:
         )
         if self._stream is not None:
             self._stream.post_modelio(relpath, dict(staged))
+        # #10: auto-stamp captured_versions on the corresponding step
+        # so the platform's causal-attribution engine can disentangle
+        # which input changed when an outcome moves. Last-write-wins.
+        if step_index is not None:
+            self._autostamp_captured_versions(
+                step_index=step_index, record=rec, prompt_hash=prompt_hash
+            )
         return relpath
+
+    def _autostamp_captured_versions(
+        self,
+        *,
+        step_index: int,
+        record: dict[str, Any],
+        prompt_hash: str | None,
+    ) -> None:
+        """Pick out the version axes the modelio record happens to carry
+        and merge them onto step.captured_versions. Silent no-op if the
+        step hasn't been recorded yet — late callers can still use
+        set_step_versions() explicitly."""
+        if self._recorder.get_step(step_index) is None:
+            return
+        patch: dict[str, str] = {}
+        request = record.get("request")
+        if isinstance(request, dict):
+            model = request.get("model")
+            if isinstance(model, str):
+                patch["model"] = model
+        if isinstance(prompt_hash, str):
+            patch["prompt_hash"] = prompt_hash
+        if not patch:
+            return
+        self._recorder.merge_step_captured_versions(step_index, versions=patch)
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
 
     def append_log(
         self,

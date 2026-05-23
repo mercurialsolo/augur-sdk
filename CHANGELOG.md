@@ -6,6 +6,62 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.13] — 2026-05-23
+
+### Sentry-for-CUA primitives (umbrella #9)
+
+- **`captured_versions` on every StepTrace** (closes #10). Promoted
+  from `ReplayFixture`-only to a first-class field. Extended with
+  `prompt_hash`, `tool_descriptions_hash`, and `env_fingerprint_ref`.
+  New `DebugSession.set_step_versions(step_index, model=…, prompt_hash=…)`
+  accepts partial updates and merges last-write-wins.
+  `record_modelio()` auto-stamps `model` (from `request.model`) and
+  `prompt_hash` onto the corresponding step's `captured_versions`
+  when called with `step_index=…`. Silent no-op if the step hasn't
+  been recorded yet — late stamping uses the explicit setter.
+- **`env_fingerprint` on Observation + StepTrace** (closes #13). New
+  `DebugSession.attach_env_fingerprint(step_index, url_host=…,
+  url_path_template=…, viewport_hash=…, dom_hash=…, api_shapes=…,
+  extensions=…)`. Stored side-by-side with the visual fingerprint
+  (`observation.hashes.phash_64`), not merged, so the platform's
+  determinism checker can attribute drift to agent/model/env
+  independently. SDK never derives `dom_hash` itself — only adapters
+  that already probe DOM for diagnostics should populate it
+  (preserves the screenshot-grounded core invariant).
+- **`record_judge_decision()`** (closes #17). Model, rule, human,
+  and hybrid judges land as first-class verdicts on
+  `step.judge_decisions`. The operative `step.verdict` is set
+  last-write-wins by default; `step.verdict_source` carries
+  `<judge_type>:<judge_id>` provenance. `attach_verifier()` now
+  emits an implicit `judge_type="rule"` decision alongside its
+  verdict patch so the rule-vs-model-vs-human provenance is
+  preserved across the legacy entry point too. New
+  `StreamingSink.post_judge_decision()` fire-and-forget hook so
+  HITL overrides land live.
+- **`trajectory_fingerprint` on every manifest** (closes #19).
+  Deterministic, hand-crafted digest over the
+  `(action.type, failure_class|verdict.status, normalized_target_label)`
+  sequence of the run. Same shape → same fingerprint, across SDK
+  versions and machines. One-step swap → close-but-different
+  fingerprint (Hamming-style proximity on the bigram half). The
+  algorithm is pluggable via the `augur_sdk.fingerprints` entry
+  point group — adapters can swap in a learned embedding without
+  changing the SDK API. Documented at
+  `docs/concepts/trajectory-fingerprint.md`. Default = `cua_v1`.
+
+### Models
+
+- `JudgeDecision`, `EnvFingerprint`, and `CapturedVersions` are now
+  re-exported from `augur_sdk` for adapter authors.
+
+### Tests
+
+- `tests/test_captured_versions.py`, `tests/test_env_fingerprint.py`,
+  `tests/test_judge_decisions.py`, `tests/test_fingerprint.py` — full
+  round-trip coverage including streaming hooks, validation against
+  the bundled schemas, and backward compat for bundles without the
+  new fields.
+
 ## [0.1.12] — 2026-05-22
 
 ### Docs

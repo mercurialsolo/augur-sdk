@@ -128,6 +128,42 @@ def record_modelio(
     validate: bool = True,
 ) -> str:  # returns bundle-relative path
     ...
+
+# Sentry-for-CUA primitives (since 0.1.13)
+def set_step_versions(
+    step_index: int,
+    *,
+    model: str | None = None,
+    prompt: str | None = None,
+    prompt_hash: str | None = None,
+    tool_descriptions_hash: str | None = None,
+    code_git_sha: str | None = None,
+    grounder: str | None = None,
+    env_fingerprint_ref: str | None = None,
+) -> None: ...
+
+def attach_env_fingerprint(
+    step_index: int,
+    *,
+    url_host: str | None = None,
+    url_path_template: str | None = None,
+    viewport_hash: str | None = None,
+    dom_hash: str | None = None,
+    api_shapes: dict[str, str] | None = None,
+    extensions: list[str] | None = None,
+) -> None: ...
+
+def record_judge_decision(
+    step_index: int,
+    *,
+    judge_id: str,
+    judge_type: str,                       # rule|model|human|hybrid
+    verdict: dict,                         # {"status": "passed"|…, ...}
+    confidence: float | None = None,
+    evidence_refs: list[str] | None = None,
+    judged_at: str | None = None,
+    promote: bool = True,
+) -> None: ...
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -182,6 +218,49 @@ enabled modelio capture), the sink latches off for the rest of
 the session and subsequent records skip the network entirely;
 they still land in the bundle on `close()`. All other errors are
 logged at DEBUG and do not disable streaming.
+
+### Sentry-for-CUA primitives (since 0.1.13)
+
+`set_step_versions(step_index, ...)` stamps version axes onto
+`step.captured_versions`. Used by the platform's causal-attribution
+engine to disentangle which input changed when an outcome moves.
+Partial updates merge; unset arguments are preserved. When
+`record_modelio(step_index=...)` is called, the SDK auto-stamps
+`model` (from `request.model`) and `prompt_hash` onto the same
+block so adapters that already use `record_modelio` get the
+linkage for free.
+
+`attach_env_fingerprint(step_index, ...)` attaches a *structural*
+environment fingerprint to a step: `url_host`, `url_path_template`,
+`viewport_hash`, `dom_hash`, `api_shapes`, and `extensions`. Stored
+side-by-side with the visual fingerprint
+(`observation.hashes.phash_64`), not merged, so the platform's
+determinism checker can attribute drift to agent / model / env
+independently. The SDK never derives `dom_hash` itself — only
+adapters that already probe DOM for diagnostics should populate it,
+which preserves the screenshot-grounded core invariant.
+
+`record_judge_decision(step_index, judge_id, judge_type, verdict, ...)`
+makes rule, model, human, and hybrid judges first-class.
+Decisions accumulate on `step.judge_decisions` (an ordered list)
+and, by default, the supplied `verdict` is also promoted to the
+operative `step.verdict` with `step.verdict_source` set to
+`"<judge_type>:<judge_id>"` for provenance. Pass `promote=False`
+to record the decision without changing the operative verdict.
+`attach_verifier()` now also emits an implicit
+`judge_type="rule"` decision alongside its verdict patch, so the
+legacy entry point preserves provenance too. When streaming is
+enabled, the decision is POSTed live to
+`POST /api/v1/runs/<run_id>/steps/<step_index>/judge-decisions`
+on a background thread.
+
+`manifest.trajectory_fingerprint` is populated automatically at
+session close — a deterministic digest over the
+`(action.type, failure_class|verdict.status, normalized_target_label)`
+sequence. Same shape → same fingerprint; one-step swap → small
+Hamming distance on the bigram half. Algorithm is pluggable via
+the `augur_sdk.fingerprints` entry point group (default = `cua_v1`).
+See [concepts/trajectory-fingerprint.md](../concepts/trajectory-fingerprint.md).
 
 `attach_verifier(step_index, status=..., ...)` lets an external harness
 add a post-hoc verdict to a step the producer left as `unknown` (or

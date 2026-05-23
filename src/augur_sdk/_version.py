@@ -1,6 +1,6 @@
 """SDK version + supported schema range."""
 
-__version__ = "0.1.12"
+__version__ = "0.1.13"
 
 # Schema range this SDK can produce and read. Inclusive on both ends.
 # Bump on every schema-affecting release; see docs/versioning.md.

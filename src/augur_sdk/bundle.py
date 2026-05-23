@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from augur_sdk._schema import SCHEMA_VERSION, list_schemas, load_schema
+from augur_sdk.fingerprint import compute_trajectory_fingerprint
 from augur_sdk.models import (
     BundleManifest,
     BundleTrace,
@@ -184,6 +185,14 @@ def write_bundle(
     session_costs = session.get("costs")
     if isinstance(session_costs, dict) and session_costs:
         manifest["costs"] = dict(session_costs)  # type: ignore[typeddict-unknown-key]
+    # #19: trajectory fingerprint over the (action, failure_or_verdict,
+    # target_label) sequence so the platform's failure-mode clustering
+    # has a cheap discriminator. Only emitted for non-empty traces;
+    # empty bundles get no fingerprint.
+    if steps:
+        manifest["trajectory_fingerprint"] = compute_trajectory_fingerprint(
+            [dict(s) for s in steps]
+        )
 
     # 6. AGENT.md — coding-agent-oriented index. We write this BEFORE adding
     # its signature to the manifest so the digest covers the rendered file.

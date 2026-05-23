@@ -102,6 +102,79 @@ class EventRecorder:
             step["verdict"] = verdict  # type: ignore[typeddict-item]
             return True
 
+    def merge_step_captured_versions(
+        self,
+        step_index: int,
+        *,
+        versions: dict[str, str],
+    ) -> bool:
+        """Merge a partial captured_versions object into a step.
+
+        Existing keys are overwritten by the patch; absent keys are
+        preserved (last-write-wins). Used by
+        DebugSession.set_step_versions() and the record_modelio
+        auto-stamp path (#10)."""
+        with self._lock:
+            step = self._steps.get(step_index)
+            if step is None:
+                return False
+            prior = step.get("captured_versions") or {}
+            existing: dict[str, Any] = (
+                dict(prior) if isinstance(prior, dict) else {}
+            )
+            existing.update(versions)
+            step["captured_versions"] = existing  # type: ignore[typeddict-item]
+            return True
+
+    def append_judge_decision(
+        self,
+        step_index: int,
+        *,
+        decision: dict[str, Any],
+        promote_verdict: bool,
+        verdict_source: str | None = None,
+    ) -> bool:
+        """Append a judge decision to a step (#17).
+
+        Multiple judge decisions per step are allowed. When
+        ``promote_verdict`` is True, the decision's verdict object is
+        copied onto ``step.verdict`` (last-write-wins) and
+        ``step.verdict_source`` is set to ``verdict_source`` for
+        provenance."""
+        with self._lock:
+            step = self._steps.get(step_index)
+            if step is None:
+                return False
+            decisions = list(step.get("judge_decisions") or [])
+            decisions.append(deepcopy(decision))
+            step["judge_decisions"] = decisions  # type: ignore[typeddict-item]
+            if promote_verdict:
+                verdict = decision.get("verdict")
+                if isinstance(verdict, dict):
+                    step["verdict"] = dict(verdict)  # type: ignore[typeddict-item]
+                if verdict_source is not None:
+                    step["verdict_source"] = verdict_source  # type: ignore[typeddict-item]
+            return True
+
+    def merge_step_env_fingerprint(
+        self,
+        step_index: int,
+        *,
+        fingerprint: dict[str, Any],
+    ) -> bool:
+        """Merge a partial env_fingerprint object into a step (#13)."""
+        with self._lock:
+            step = self._steps.get(step_index)
+            if step is None:
+                return False
+            prior = step.get("env_fingerprint") or {}
+            existing: dict[str, Any] = (
+                dict(prior) if isinstance(prior, dict) else {}
+            )
+            existing.update(fingerprint)
+            step["env_fingerprint"] = existing  # type: ignore[typeddict-item]
+            return True
+
     def merge_step_costs(
         self,
         step_index: int,

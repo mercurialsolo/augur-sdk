@@ -78,6 +78,7 @@ nav:
       - Redaction: concepts/redaction.md
       - Diagnostics: concepts/diagnostics.md
       - Failure-Class Taxonomy: concepts/failure-class-taxonomy.md
+      - Trajectory Fingerprint: concepts/trajectory-fingerprint.md
   - Integrations:
       - Python: integrations/python.md
       - Playwright: integrations/playwright.md

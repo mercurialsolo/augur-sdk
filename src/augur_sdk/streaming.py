@@ -162,6 +162,25 @@ class StreamingSink:
         path = f"/runs/{run_id}/{relpath}"
         self._spawn(lambda: self._post_modelio_request(path, record))
 
+    def post_judge_decision(
+        self, step_index: int, decision: dict[str, Any]
+    ) -> None:
+        """POST a judge decision to the server (#17).
+
+        Fires on the same fire-and-forget background thread as steps/
+        events; the local bundle on close is the source of truth.
+        """
+        run_id = self._run_id or "unknown"
+        body = dict(decision)
+        body["step_index"] = step_index
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/steps/{step_index}/judge-decisions",
+                body,
+                method="POST",
+            )
+        )
+
     def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None:
         """Append a text chunk to the server's logs/ directory (#17).
 

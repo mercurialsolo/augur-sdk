@@ -85,6 +85,15 @@ class ObservationRedaction(TypedDict, total=False):
     regions: list[RedactionRegion]
 
 
+class EnvFingerprint(TypedDict, total=False):
+    url_host: str
+    url_path_template: str
+    viewport_hash: str
+    dom_hash: str
+    api_shapes: dict[str, str]
+    extensions: list[str]
+
+
 class Observation(TypedDict, total=False):
     artifact: str
     media_type: Literal["image/png", "image/jpeg", "image/webp"]
@@ -98,6 +107,7 @@ class Observation(TypedDict, total=False):
     hashes: Hashes
     redaction: ObservationRedaction
     missing: bool
+    env_fingerprint: EnvFingerprint
 
 
 class Action(TypedDict, total=False):
@@ -127,6 +137,18 @@ class Verdict(TypedDict, total=False):
     evidence_refs: list[str]
 
 
+JudgeType = Literal["rule", "model", "human", "hybrid"]
+
+
+class JudgeDecision(TypedDict, total=False):
+    judge_id: str
+    judge_type: JudgeType
+    verdict: Verdict
+    confidence: float
+    evidence_refs: list[str]
+    judged_at: str
+
+
 class RecoveryDecision(TypedDict, total=False):
     type: RecoveryType
     reason: str
@@ -152,6 +174,10 @@ class StepTrace(TypedDict, total=False):
     recovery_decision: RecoveryDecision | None
     events: list[str]
     logs: list[str]
+    captured_versions: CapturedVersions
+    env_fingerprint: EnvFingerprint
+    judge_decisions: list[JudgeDecision]
+    verdict_source: str
 
 
 class DecisionEvent(TypedDict, total=False):
@@ -193,8 +219,11 @@ class ReplayExpected(TypedDict, total=False):
 class CapturedVersions(TypedDict, total=False):
     model: str
     prompt: str
+    prompt_hash: str
+    tool_descriptions_hash: str
     code_git_sha: str
     grounder: str
+    env_fingerprint_ref: str
 
 
 class ReplayFixture(TypedDict, total=False):
@@ -263,3 +292,4 @@ class BundleManifest(TypedDict, total=False):
     paths: BundlePaths
     signatures: NotRequired[dict[str, str]]
     missing: NotRequired[list[str]]
+    trajectory_fingerprint: NotRequired[str]
