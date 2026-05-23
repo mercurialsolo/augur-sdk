@@ -20,7 +20,9 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any
 
-from augur_sdk._schema import SCHEMA_VERSION, ValidationError, validator_for
+from augur_schema import SCHEMA_VERSION, validator_for
+from jsonschema.exceptions import ValidationError
+
 from augur_sdk.bundle import write_bundle
 from augur_sdk.capture import CaptureMode, resolve_capture_mode
 from augur_sdk.intervention import InterventionChannel

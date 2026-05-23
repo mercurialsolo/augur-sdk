@@ -6,6 +6,67 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-23
+
+### Schemas now live in the `augur-schema` PyPI package
+
+Closes #20. The SDK no longer vendors its own copy of the canonical
+JSON Schemas. They're shipped by the
+[`augur-schema`](https://pypi.org/project/augur-schema/) package and
+pulled in as a runtime dependency
+(`augur-schema>=0.3.1,<0.4`). Single source of truth across the SDK,
+the platform server, the viewer, and any third-party reader.
+
+- Deleted `src/augur_sdk/_schema/` (the JSON files and the loader
+  module). 17 files removed.
+- `from augur_sdk._schema import …` → `from augur_schema import …` in
+  `session.py`, `bundle.py`, `validation.py`, and all tests. The
+  upstream package re-exports the same surface (`SCHEMA_VERSION`,
+  `SchemaError`, `list_schemas`, `load_schema`, `schemas_dir`,
+  `validator_for`), so the swap is mechanical for callers.
+- `ValidationError` no longer re-exported via `augur_sdk._schema`;
+  callers that need it import directly from `jsonschema.exceptions`
+  (one-line change in two test modules + `session.py`).
+- `bundle.py`'s schema-embed-in-bundle step now copies raw bytes from
+  `augur_schema.schemas_dir()` rather than parse-and-reserialise via
+  `load_schema()`. The embedded copy is bit-for-bit identical to the
+  dep's published schema.
+
+### Schema-side fix consumed in this release
+
+- `branch_context` is now referenced on `debug_session.schema.json`
+  as `anyOf [$ref, null]` (parallel to the existing reference on
+  `step_trace.schema.json`). The SDK already emitted `branch_context`
+  on the session record; with `augur-schema 0.3.1`, validation
+  accepts it. Without the fix, `validate_bundle()` rejected its own
+  branch bundles after the dep swap. Caught by a one-off field-shape
+  diff between the vendored copy and the dep before deletion.
+
+### Minor version bump
+
+The `augur_sdk._schema` module was importable from outside the SDK
+(referenced in 0.1.x docstrings and the bundle-layout doc), so
+removing it is a semver-minor break even though no other public-API
+signature changed. The SDK records, on-disk bundle layout, and
+method surface are unchanged from 0.1.14.
+
+### Records that gain canonical schemas
+
+The upstream package ships new canonical schemas for records the SDK
+already emitted as raw JSON in 0.1.14:
+`reasoning_trace.schema.json`, `outcome_record.schema.json`,
+`eval_candidate.schema.json`, plus standalone files for the
+previously-inlined `branch_context`, `captured_versions`,
+`env_fingerprint`, `judge_decision`, and `side_effect`. Calling
+`validator_for(name)` works the same way for these as for every
+other schema.
+
+### Tests
+
+- 180 tests pass against `augur-schema 0.3.1`. The full quality gate
+  (`uv run pytest`, `uv run mypy -p augur_sdk`, `uv run ruff check`)
+  stays green.
+
 ## [0.1.14] — 2026-05-23
 
 ### Sentry-for-CUA primitives — round two (umbrella #9)

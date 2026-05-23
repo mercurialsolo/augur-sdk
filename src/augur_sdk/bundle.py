@@ -8,9 +8,9 @@ Every bundle also ships with:
 - `AGENT.md`  — a tiny markdown index oriented at coding agents. First-read
   hints, suggested follow-up paths per finding type, and a summary of what's
   inside.
-- `schema/*.schema.json` — copies of the canonical JSON Schemas from
-  `augur_sdk._schema`, so an offline agent has the validator in-hand without a
-  network round-trip.
+- `schema/*.schema.json` — copies of the canonical JSON Schemas from the
+  `augur-schema` package, so an offline agent has the validator in-hand
+  without a network round-trip.
 
 Both are written automatically; producers don't need to opt in.
 """
@@ -22,7 +22,8 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from augur_sdk._schema import SCHEMA_VERSION, list_schemas, load_schema
+from augur_schema import SCHEMA_VERSION, list_schemas, load_schema, schemas_dir
+
 from augur_sdk.fingerprint import compute_trajectory_fingerprint
 from augur_sdk.models import (
     BundleManifest,
@@ -391,13 +392,27 @@ def _failure_class_summary(steps: list[StepTrace]) -> str:
 
 
 def _bundled_schema_files() -> list[tuple[str, str]]:
-    """Return (bundle-relative-path, JSON text) for every canonical schema."""
+    """Return (bundle-relative-path, JSON text) for every canonical schema.
+
+    Reads raw bytes from ``augur_schema.schemas_dir()`` so the embedded
+    copy is bit-for-bit identical to the dep's published schema — that
+    way an offline consumer with the bundle in hand validates the same
+    way a consumer that pip-installed augur-schema does.
+    """
     out: list[tuple[str, str]] = []
+    src_dir = schemas_dir()
     for name in list_schemas():
-        schema = load_schema(name)
-        # Strip the absolute $id so the bundled copy is self-contained; we
-        # don't want consumers resolving against augur.dev.
-        payload = json.dumps(schema, indent=2, sort_keys=True) + "\n"
+        path = src_dir / f"{name}.schema.json"
+        # Fall back to load_schema() if the dep ever moves files around;
+        # this keeps the embed step resilient to packaging tweaks.
+        if path.exists():
+            payload = path.read_text(encoding="utf-8")
+            if not payload.endswith("\n"):
+                payload += "\n"
+        else:
+            payload = (
+                json.dumps(load_schema(name), indent=2, sort_keys=True) + "\n"
+            )
         out.append((f"schema/{name}.schema.json", payload))
     return out
 

@@ -25,9 +25,10 @@ the generic vocabulary below.
 | `som_clicked_container`        | Set-of-marks grounding picked the wrong parent element (overshoot).            |
 | `tab_walk_target_absent`       | Keyboard navigation reached the end of the focus order without hitting target. |
 
-These match the vendored
-[`failure_class.schema.json`](https://github.com/mercurialsolo/augur-sdk/blob/main/src/augur_sdk/_schema/json/failure_class.schema.json)
-examples and are what the generic `cua` rule pack reasons about.
+These match the canonical
+[`failure_class.schema.json`](https://github.com/mercurialsolo/augur/blob/main/packages/schema/augur_schema/json/failure_class.schema.json)
+shipped by the `augur-schema` package and are what the generic `cua`
+rule pack reasons about.
 
 ## Adapter-specific extensions
 

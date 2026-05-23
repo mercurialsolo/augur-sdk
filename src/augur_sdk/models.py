@@ -1,7 +1,7 @@
 """Augur data models (TypedDicts).
 
-These mirror the canonical JSON Schemas under
-`src/augur_sdk/_schema/json/`. We use TypedDicts (not dataclasses
+These mirror the canonical JSON Schemas shipped by the `augur-schema`
+package (`augur_schema.schemas_dir()`). We use TypedDicts (not dataclasses
 or pydantic) so callers can construct records as plain dicts and the SDK can
 serialize them directly to JSON without an intermediate copy.
 

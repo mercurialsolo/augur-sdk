@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from augur_schema import validator_for
 
 from augur_sdk import CaptureMode, DebugSession
-from augur_sdk._schema import validator_for
 from augur_sdk.validation import validate_bundle
 
 
