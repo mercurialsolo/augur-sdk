@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://augur.dev/schemas/0.1/side_effect.schema.json",
+  "title": "SideEffect",
+  "description": "One declared (and optionally committed) irreversible agent action. Closes #11. Producers MUST call declare_side_effect BEFORE dispatching so the declaration is recorded even if the run is killed mid-step; commit_side_effect lands the observed result after dispatch returns.",
+  "type": "object",
+  "required": ["side_effect_id", "step_index", "resource", "action", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "side_effect_id": {
+      "type": "string",
+      "description": "Stable id for this declared effect; usually a UUID."
+    },
+    "step_index": {"type": "integer", "minimum": 0},
+    "step_id": {"type": "string"},
+    "resource": {
+      "type": "string",
+      "description": "What the agent is acting on. Conventionally `<system>:<id>` (e.g. `stripe:cus_x`, `gmail:msg_y`)."
+    },
+    "action": {
+      "type": "string",
+      "description": "Action verb (form_submit, payment_create, email_send, …). Free-form so adapters can extend."
+    },
+    "idempotency_key": {"type": "string"},
+    "reversibility": {
+      "type": "string",
+      "enum": ["irreversible", "reversible", "compensated"]
+    },
+    "compensation_handle": {
+      "type": "string",
+      "description": "Adapter-defined handle a compensating workflow can use to undo this effect."
+    },
+    "provenance": {
+      "type": "string",
+      "enum": ["sdk_declared", "adapter_inferred", "human_declared"],
+      "description": "Who declared this effect. `sdk_declared` = explicit call; `adapter_inferred` = adapter on_side_effect hook; `human_declared` = operator override."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["intent_only", "committed", "aborted"],
+      "description": "Lifecycle: declare → intent_only; commit → committed; kill between → aborted."
+    },
+    "declared_at": {"type": "string", "format": "date-time"},
+    "committed_at": {"type": ["string", "null"], "format": "date-time"},
+    "aborted_at": {"type": ["string", "null"], "format": "date-time"},
+    "observed_result": {
+      "description": "Dispatcher-returned payload, after redaction.",
+      "type": ["object", "string", "number", "boolean", "null"]
+    },
+    "abort_reason": {"type": "string"}
+  }
+}

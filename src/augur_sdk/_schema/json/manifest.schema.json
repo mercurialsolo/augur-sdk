@@ -75,6 +75,7 @@
         "replay": {"type": "string", "const": "replay/"},
         "diagnostics": {"type": "string", "const": "diagnostics/"},
         "modelio": {"type": "string", "const": "modelio/"},
+        "side_effects": {"type": "string", "const": "side_effects/"},
         "preferences": {"type": "string", "const": "preferences/"},
         "schema": {"type": "string", "const": "schema/"},
         "agent": {"type": "string", "const": "AGENT.md"}

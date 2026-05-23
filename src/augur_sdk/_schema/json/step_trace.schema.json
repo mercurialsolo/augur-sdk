@@ -211,6 +211,21 @@
       "type": "string",
       "description": "Identifies which judge produced the operative `verdict` block when judge_decisions is non-empty. By convention: `<judge_type>:<judge_id>` (e.g. `human:reviewer42`). Closes #17."
     },
+    "branch_context": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Propagated from the session-level branch_context onto every step so server-side filters can exclude replay-branch trajectories from production cohorts by default. Closes #15.",
+      "required": ["parent_run_id", "branch_point_step_index", "mutated_axis"],
+      "properties": {
+        "parent_run_id":            {"type": "string"},
+        "branch_point_step_index":  {"type": "integer", "minimum": 0},
+        "mutated_axis": {
+          "type": "string",
+          "enum": ["model", "prompt", "action", "grounder", "tool_description"]
+        },
+        "branch_id":                {"type": "string"}
+      }
+    },
     "env_fingerprint": {
       "type": "object",
       "additionalProperties": false,

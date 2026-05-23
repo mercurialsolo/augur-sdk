@@ -33,6 +33,14 @@ class EventRecorder:
         # (step_index, layer) → next seq for path uniqueness
         self._modelio_hash_index: dict[str, str] = {}
         # prompt_hash → bundle-relative path (for record_modelio idempotency)
+        self._eval_candidates: dict[int, dict[str, Any]] = {}
+        # step_index → tag record (mark_for_eval, #16)
+        self._outcomes: list[dict[str, Any]] = []
+        # finalize_outcome records (#18)
+        self._reasoning: list[dict[str, Any]] = []
+        # record_reasoning records (#14)
+        self._side_effects: dict[str, dict[str, Any]] = {}
+        # side_effect_id → record (#11)
 
     # -- steps --
 
@@ -101,6 +109,83 @@ class EventRecorder:
                 verdict["score_components"] = dict(components)
             step["verdict"] = verdict  # type: ignore[typeddict-item]
             return True
+
+    def stage_side_effect(self, *, record: dict[str, Any]) -> None:
+        """Stage or patch one side-effect record (#11). Keyed by
+        ``side_effect_id``; subsequent calls replace the prior
+        record."""
+        sid = record.get("side_effect_id")
+        if not isinstance(sid, str):
+            raise ValueError(
+                "side-effect record missing 'side_effect_id'"
+            )
+        with self._lock:
+            self._side_effects[sid] = deepcopy(record)
+
+    def get_side_effect(self, side_effect_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            return deepcopy(self._side_effects.get(side_effect_id))
+
+    def staged_side_effects(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [
+                deepcopy(self._side_effects[k])
+                for k in sorted(self._side_effects)
+            ]
+
+    def pending_side_effects(self) -> list[dict[str, Any]]:
+        """Declared but not yet committed/aborted."""
+        with self._lock:
+            return [
+                deepcopy(v)
+                for v in self._side_effects.values()
+                if v.get("status") == "intent_only"
+            ]
+
+    def record_reasoning(self, *, trace: dict[str, Any]) -> None:
+        """Append a reasoning record (#14). Multiple per step OK."""
+        with self._lock:
+            self._reasoning.append(deepcopy(trace))
+
+    def staged_reasoning(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [deepcopy(r) for r in self._reasoning]
+
+    def stage_outcome(self, *, record: dict[str, Any]) -> None:
+        """Stage one outcome record (#18)."""
+        with self._lock:
+            self._outcomes.append(deepcopy(record))
+
+    def staged_outcomes(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [deepcopy(o) for o in self._outcomes]
+
+    def mark_for_eval(
+        self,
+        *,
+        step_index: int,
+        reason: str,
+        candidate_cluster_id: str | None,
+        tagged_at: str,
+    ) -> dict[str, Any]:
+        """Tag a step as a regression-fixture candidate (#16).
+
+        Idempotent on ``step_index`` — last-write-wins. Returns the
+        stored tag record."""
+        record: dict[str, Any] = {
+            "step_index": step_index,
+            "reason": reason,
+            "tagged_at": tagged_at,
+        }
+        if candidate_cluster_id is not None:
+            record["candidate_cluster_id"] = candidate_cluster_id
+        with self._lock:
+            self._eval_candidates[step_index] = deepcopy(record)
+        return record
+
+    def staged_eval_candidates(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [deepcopy(self._eval_candidates[i]) for i in sorted(self._eval_candidates)]
 
     def merge_step_captured_versions(
         self,

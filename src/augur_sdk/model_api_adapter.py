@@ -209,6 +209,50 @@ class ModelApiAdapterBase:
 
         return output_dir
 
+    @staticmethod
+    def extract_reasoning_from_response(
+        response: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Pull reasoning blocks out of a model response without
+        caller wiring (#14).
+
+        Recognised shapes:
+
+        - **Claude extended thinking** — Messages API responses carry
+          ``content`` blocks with ``type == "thinking"`` and a ``text``
+          field. Returned as ``format="claude_extended_thinking"``.
+        - **OpenAI reasoning summary** — Responses API returns
+          ``reasoning.summary`` (or ``reasoning.text`` on older preview
+          shapes). Returned as ``format="openai_reasoning_summary"``.
+
+        Unknown shapes return an empty list — adapters should fall
+        back to calling ``session.record_reasoning()`` directly with
+        ``format="adapter_inferred"``.
+        """
+        out: list[dict[str, Any]] = []
+        content = response.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "thinking":
+                    text = block.get("text") or block.get("thinking")
+                    if isinstance(text, str) and text:
+                        out.append(
+                            {
+                                "text": text,
+                                "format": "claude_extended_thinking",
+                            }
+                        )
+        reasoning = response.get("reasoning")
+        if isinstance(reasoning, dict):
+            text = reasoning.get("summary") or reasoning.get("text")
+            if isinstance(text, str) and text:
+                out.append(
+                    {"text": text, "format": "openai_reasoning_summary"}
+                )
+        return out
+
     def _intent_from_turn(
         self, messages: list[dict[str, Any]], turn_idx: int
     ) -> str:

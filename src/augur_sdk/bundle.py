@@ -62,6 +62,7 @@ _PATH_MAP = {
     "replay": "replay/",
     "diagnostics": "diagnostics/",
     "modelio": "modelio/",
+    "side_effects": "side_effects/",
     "preferences": "preferences/",
     "schema": "schema/",
     "agent": "AGENT.md",
@@ -154,6 +155,55 @@ def write_bundle(
             f.write(body)
         if include_signatures:
             signatures[relpath] = _sha256(body.encode("utf-8"))
+
+    # 3b. eval_candidates.json — tagged regression-fixture candidates (#16).
+    # Only emitted when at least one step was tagged; empty bundles get no file.
+    eval_candidates = recorder.staged_eval_candidates()
+    if eval_candidates:
+        payload = _dumps({"candidates": eval_candidates})
+        with store.open_write_text("eval_candidates.json") as f:
+            f.write(payload)
+        if include_signatures:
+            signatures["eval_candidates.json"] = _sha256(payload.encode("utf-8"))
+
+    # 3c. outcomes.json — coupled (verdict, cost, task_class) records (#18).
+    outcomes = recorder.staged_outcomes()
+    if outcomes:
+        outcomes_payload = _dumps({"outcomes": outcomes})
+        with store.open_write_text("outcomes.json") as f:
+            f.write(outcomes_payload)
+        if include_signatures:
+            signatures["outcomes.json"] = _sha256(outcomes_payload.encode("utf-8"))
+
+    # 3e. side_effects/ — irreversible-action ledger keyed by step + id (#11).
+    side_effects = recorder.staged_side_effects()
+    for record in side_effects:
+        sid = record.get("side_effect_id", "unknown")
+        step_idx = record.get("step_index", 0)
+        relpath = f"side_effects/{int(step_idx):04d}-{sid}.json"
+        payload = _dumps(record)
+        with store.open_write_text(relpath) as f:
+            f.write(payload)
+        if include_signatures:
+            signatures[relpath] = _sha256(payload.encode("utf-8"))
+
+    # 3d. events/reasoning.jsonl — reasoning records (#14). One line per
+    # record so streaming consumers can `tail -f` and so the file stays
+    # append-only if a future SDK version writes incrementally.
+    reasoning = recorder.staged_reasoning()
+    if reasoning:
+        reasoning_payload = (
+            "\n".join(
+                json.dumps(r, sort_keys=True, ensure_ascii=False) for r in reasoning
+            )
+            + "\n"
+        )
+        with store.open_write_text("events/reasoning.jsonl") as f:
+            f.write(reasoning_payload)
+        if include_signatures:
+            signatures["events/reasoning.jsonl"] = _sha256(
+                reasoning_payload.encode("utf-8")
+            )
 
     # 4. trace.json (session + steps)
     trace: BundleTrace = {"session": session, "steps": steps}

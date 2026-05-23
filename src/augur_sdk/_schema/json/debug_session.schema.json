@@ -65,6 +65,22 @@
       "additionalProperties": {"type": "string"},
       "description": "Free-form key/value tags (tenant, environment, plan signature, etc.)."
     },
+    "branch_context": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Labels a replay-branch trajectory with its parent run + the mutated axis. Production runs MUST omit this or set null. Server-side cohort filters exclude branches by default. Closes #15.",
+      "required": ["parent_run_id", "branch_point_step_index", "mutated_axis"],
+      "properties": {
+        "parent_run_id":            {"type": "string"},
+        "branch_point_step_index":  {"type": "integer", "minimum": 0},
+        "mutated_axis": {
+          "type": "string",
+          "enum": ["model", "prompt", "action", "grounder", "tool_description"]
+        },
+        "mutation":                 {"type": "object", "additionalProperties": true},
+        "branch_id":                {"type": "string"}
+      }
+    },
     "costs": {
       "type": "object",
       "additionalProperties": false,

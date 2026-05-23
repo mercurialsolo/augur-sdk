@@ -41,6 +41,12 @@ viewer, CLI, and coding agents read bundles without configuration.
     0011-verifier-0.json             # capture_mode=model_io or full
   preferences/
     0011.json                        # DPO / RLHF preference record (since 0.1.6)
+  side_effects/                      # irreversible-action ledger (since 0.1.14)
+    0003-se_abc123.json              #   <step:04d>-<side_effect_id>.json
+  eval_candidates.json               # mark_for_eval tags (since 0.1.14, when present)
+  outcomes.json                      # finalize_outcome records (since 0.1.14, when present)
+  events/
+    reasoning.jsonl                  # record_reasoning records (since 0.1.14, when present)
 ```
 
 ## Why path-stable

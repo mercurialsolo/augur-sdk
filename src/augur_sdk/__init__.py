@@ -11,6 +11,7 @@ from augur_sdk.capture import CaptureMode, resolve_capture_mode
 from augur_sdk.model_api_adapter import ModelApiAdapterBase
 from augur_sdk.models import (
     Action,
+    BranchContext,
     BundleManifest,
     BundleTrace,
     CapturedVersions,
@@ -22,6 +23,7 @@ from augur_sdk.models import (
     Observation,
     RecoveryDecision,
     ReplayFixture,
+    SideEffect,
     StepTrace,
     Verdict,
 )
@@ -39,6 +41,7 @@ from augur_sdk.storage import LocalFSStore, S3Store, Store
 __all__ = [
     "Action",
     "Adapter",
+    "BranchContext",
     "BundleManifest",
     "BundleTrace",
     "CaptureMode",
@@ -59,6 +62,7 @@ __all__ = [
     "RedactionPolicy",
     "ReplayFixture",
     "S3Store",
+    "SideEffect",
     "StepTrace",
     "Store",
     "SUPPORTED_SCHEMA_RANGE",

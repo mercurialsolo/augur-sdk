@@ -77,6 +77,11 @@ class RedactionPolicy:
     mask_keys: frozenset[str] = _MASK_KEYS
     redactors: list[Callable[[str], str]] = field(default_factory=list)
     droppers: list[Callable[[str, Any], bool]] = field(default_factory=list)
+    # #14: reasoning text often carries PII (account numbers,
+    # personal info the user mentioned mid-task) that the action
+    # stream doesn't. Reasoning_redactors run on the `text` field of
+    # ReasoningTrace records *in addition to* the regular redactors.
+    reasoning_redactors: list[Callable[[str], str]] = field(default_factory=list)
 
     def add_redactor(self, fn: Callable[[str], str]) -> None:
         """Add a string-level redactor. Runs after the built-in regex set."""
@@ -85,6 +90,26 @@ class RedactionPolicy:
     def add_dropper(self, fn: Callable[[str, Any], bool]) -> None:
         """Add a (key, value) -> bool dropper. Return True to drop the field."""
         self.droppers.append(fn)
+
+    def add_reasoning_redactor(self, fn: Callable[[str], str]) -> None:
+        """Add a redactor that runs only on reasoning text (#14)."""
+        self.reasoning_redactors.append(fn)
+
+    def apply_reasoning(self, trace: dict[str, Any]) -> dict[str, Any]:
+        """Apply redaction tailored to a reasoning record.
+
+        Walks the trace through the regular redaction pipeline first
+        (so global rules still cover the obvious things), then runs
+        the reasoning-specific redactors over the ``text`` field."""
+        redacted = self.apply(trace)
+        if not isinstance(redacted, dict):
+            return trace
+        text = redacted.get("text")
+        if isinstance(text, str) and self.reasoning_redactors:
+            for fn in self.reasoning_redactors:
+                text = fn(text)
+            redacted["text"] = text
+        return redacted
 
     def apply(self, value: Any, *, key: str | None = None) -> Any:
         """Walk `value`, returning a redacted copy."""
