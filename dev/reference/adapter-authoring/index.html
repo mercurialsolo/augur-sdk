@@ -1344,11 +1344,11 @@ myorg</code>.</p>
    <code>device_px</code>, <code>screenshot_px</code>, or <code>dom_client_rect</code>. The validator
    rejects anything else.</li>
 <li><strong>Map failure classes.</strong> Free-form framework failure strings get
-   canonicalised against the vocabulary fixed by
-   <code>src/augur_sdk/_schema/json/failure_class.schema.json</code>.</li>
-<li><strong>Produce a bundle that passes <code>validate_bundle()</code>.</strong> The schemas are
-   vendored at <code>augur_sdk._schema/json/</code>; the SDK runs them on every
-   write.</li>
+   canonicalised against the vocabulary fixed by <code>failure_class.schema.json</code>
+   in the <a href="https://pypi.org/project/augur-schema/"><code>augur-schema</code></a> package.</li>
+<li><strong>Produce a bundle that passes <code>validate_bundle()</code>.</strong> The canonical
+   schemas come from the <code>augur-schema</code> package (pulled in as an SDK
+   dependency); the SDK runs them on every write.</li>
 </ol>
 <h2 id="rule-pack-write-your-own-diagnostic-rules">Rule pack — write your own diagnostic rules<a class="headerlink" href="#rule-pack-write-your-own-diagnostic-rules" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># myorg_augur_adapter/rules.py</span>

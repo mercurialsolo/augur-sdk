@@ -229,6 +229,27 @@ def bind_intervention(
 # When set, labels the run as a replay branch; lands on the session
 # record and propagates a lightweight slice (no mutation payload) to
 # every step. See BranchContext model.
+
+# Branching-replay constructor (since 0.2.1)
+@classmethod
+def branch_from(
+    cls,
+    *,
+    parent_run_id: str,
+    branch_point_step_index: int,
+    mutated_axis: str,              # model|prompt|action|grounder|tool_description
+    mutation: dict,
+    client_name: str,
+    out_dir: str | Path,
+    mode: str = "auto",              # replay|sandbox|auto
+    parent_bundle: str | Path | None = None,
+    branch_id: str | None = None,
+    run_id: str | None = None,
+    **session_kwargs,
+) -> DebugSession: ...
+
+@property
+def branch_mode(self) -> str | None: ...
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -390,6 +411,58 @@ A lightweight slice (without `mutation`) propagates to every step so
 server-side cohort filters can exclude branches by default without
 joining back to the session. Production runs omit the field — no
 regression.
+
+### `DebugSession.branch_from(...)` (since 0.2.1)
+
+The higher-level constructor for replay branches. Takes the parent
+linkage explicitly, picks the right mode automatically, and
+optionally loads the deterministic prefix from a parent bundle so
+the branch's bundle includes every step from index 0 without
+re-execution.
+
+```python
+# Mutate the model on a parent run; replay everything up to step 3,
+# then run fresh against a sandbox.
+with DebugSession.branch_from(
+    parent_run_id="run_a",
+    branch_point_step_index=3,
+    mutated_axis="model",                       # model|prompt|action|grounder|tool_description
+    mutation={"model": "claude-opus-4-7"},
+    client_name="myadapter",
+    out_dir="branch-bundle/",
+    mode="auto",                                # replay|sandbox|auto
+    parent_bundle="parent-bundle/",             # required when mode resolves to replay
+) as branch:
+    assert branch.branch_mode == "replay"
+    # Steps 0–2 are already in `branch`'s recorder from the parent.
+    # Producer continues from step 3 with the mutated model:
+    branch.record_step({...step 3 with new behaviour...})
+```
+
+Modes:
+
+- **`replay`** — load steps `[0, branch_point_step_index)` from
+  `parent_bundle`'s `trace.json` into the new session, copying
+  pre/post screenshot bytes verbatim. The producer continues fresh
+  from `branch_point_step_index`. Refuses when
+  `mutated_axis="action"` because the parent's downstream
+  observations no longer reflect what the new agent will see
+  (SPEC §10).
+- **`sandbox`** — stamp `branch_context` only; the producer executes
+  from step 0 against a live target. No prefix loading. The right
+  mode when `mutated_axis="action"` or when the parent bundle isn't
+  available.
+- **`auto`** (default) — picks `sandbox` for `mutated_axis="action"`,
+  `replay` for the four upstream axes.
+
+`branch_id` and `run_id` default to
+`f"{parent_run_id}:branch:<short-uuid>"` (per
+`branch_context.schema.json`'s convention); pass either explicitly to
+override. Any other `DebugSession` kwarg (`tags`, `client_version`,
+`capture_mode`, `redaction_policy`, …) can be passed through.
+
+The resolved mode is exposed on `session.branch_mode` for callers and
+tests that want to introspect after construction.
 
 `bind_intervention(adapter)` wires up a long-poll on
 `GET <DSN-base>/runs/<run_id>/commands` and dispatches received

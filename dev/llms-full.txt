@@ -649,10 +649,11 @@ the path in `manifest.missing[]`. Consumers MUST treat that as
 ## Full spec
 
 The normative path/format rules are split between the SDK's
-[SPEC.md](../spec.md) (producer behaviour) and the vendored JSON
-Schemas at `<bundle>/schema/*.schema.json`, which are bit-for-bit
-identical to `src/augur_sdk/_schema/json/*.schema.json` in this repo —
-that's how an offline consumer validates without a network.
+[SPEC.md](../spec.md) (producer behaviour) and the canonical JSON
+Schemas shipped by the [`augur-schema`](https://pypi.org/project/augur-schema/)
+PyPI package. Every bundle ships bit-for-bit copies under
+`<bundle>/schema/*.schema.json` so an offline consumer validates
+without a network.
 
 
 ---
@@ -941,9 +942,10 @@ the generic vocabulary below.
 | `som_clicked_container`        | Set-of-marks grounding picked the wrong parent element (overshoot).            |
 | `tab_walk_target_absent`       | Keyboard navigation reached the end of the focus order without hitting target. |
 
-These match the vendored
-[`failure_class.schema.json`](https://github.com/mercurialsolo/augur-sdk/blob/main/src/augur_sdk/_schema/json/failure_class.schema.json)
-examples and are what the generic `cua` rule pack reasons about.
+These match the canonical
+[`failure_class.schema.json`](https://github.com/mercurialsolo/augur/blob/main/packages/schema/augur_schema/json/failure_class.schema.json)
+shipped by the `augur-schema` package and are what the generic `cua`
+rule pack reasons about.
 
 ## Adapter-specific extensions
 
@@ -1533,7 +1535,8 @@ Mantis's `failure_class.classify()` returns its own vocabulary
 (`cf_challenge`, `nav_timeout`, `wrong_target`, `brain_loop_exhausted`,
 …). The Mantis adapter canonicalises these against the Augur
 failure-class taxonomy; the canonical vocabulary is fixed by the
-vendored schema `src/augur_sdk/_schema/json/failure_class.schema.json`.
+[`failure_class.schema.json`](https://github.com/mercurialsolo/augur/blob/main/packages/schema/augur_schema/json/failure_class.schema.json)
+shipped by the `augur-schema` package.
 
 
 ---
@@ -1773,6 +1776,27 @@ def bind_intervention(
 # When set, labels the run as a replay branch; lands on the session
 # record and propagates a lightweight slice (no mutation payload) to
 # every step. See BranchContext model.
+
+# Branching-replay constructor (since 0.2.1)
+@classmethod
+def branch_from(
+    cls,
+    *,
+    parent_run_id: str,
+    branch_point_step_index: int,
+    mutated_axis: str,              # model|prompt|action|grounder|tool_description
+    mutation: dict,
+    client_name: str,
+    out_dir: str | Path,
+    mode: str = "auto",              # replay|sandbox|auto
+    parent_bundle: str | Path | None = None,
+    branch_id: str | None = None,
+    run_id: str | None = None,
+    **session_kwargs,
+) -> DebugSession: ...
+
+@property
+def branch_mode(self) -> str | None: ...
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -1934,6 +1958,58 @@ A lightweight slice (without `mutation`) propagates to every step so
 server-side cohort filters can exclude branches by default without
 joining back to the session. Production runs omit the field — no
 regression.
+
+### `DebugSession.branch_from(...)` (since 0.2.1)
+
+The higher-level constructor for replay branches. Takes the parent
+linkage explicitly, picks the right mode automatically, and
+optionally loads the deterministic prefix from a parent bundle so
+the branch's bundle includes every step from index 0 without
+re-execution.
+
+```python
+# Mutate the model on a parent run; replay everything up to step 3,
+# then run fresh against a sandbox.
+with DebugSession.branch_from(
+    parent_run_id="run_a",
+    branch_point_step_index=3,
+    mutated_axis="model",                       # model|prompt|action|grounder|tool_description
+    mutation={"model": "claude-opus-4-7"},
+    client_name="myadapter",
+    out_dir="branch-bundle/",
+    mode="auto",                                # replay|sandbox|auto
+    parent_bundle="parent-bundle/",             # required when mode resolves to replay
+) as branch:
+    assert branch.branch_mode == "replay"
+    # Steps 0–2 are already in `branch`'s recorder from the parent.
+    # Producer continues from step 3 with the mutated model:
+    branch.record_step({...step 3 with new behaviour...})
+```
+
+Modes:
+
+- **`replay`** — load steps `[0, branch_point_step_index)` from
+  `parent_bundle`'s `trace.json` into the new session, copying
+  pre/post screenshot bytes verbatim. The producer continues fresh
+  from `branch_point_step_index`. Refuses when
+  `mutated_axis="action"` because the parent's downstream
+  observations no longer reflect what the new agent will see
+  (SPEC §10).
+- **`sandbox`** — stamp `branch_context` only; the producer executes
+  from step 0 against a live target. No prefix loading. The right
+  mode when `mutated_axis="action"` or when the parent bundle isn't
+  available.
+- **`auto`** (default) — picks `sandbox` for `mutated_axis="action"`,
+  `replay` for the four upstream axes.
+
+`branch_id` and `run_id` default to
+`f"{parent_run_id}:branch:<short-uuid>"` (per
+`branch_context.schema.json`'s convention); pass either explicitly to
+override. Any other `DebugSession` kwarg (`tags`, `client_version`,
+`capture_mode`, `redaction_policy`, …) can be passed through.
+
+The resolved mode is exposed on `session.branch_mode` for callers and
+tests that want to introspect after construction.
 
 `bind_intervention(adapter)` wires up a long-poll on
 `GET <DSN-base>/runs/<run_id>/commands` and dispatches received
@@ -2437,11 +2513,11 @@ Every adapter MUST:
    `device_px`, `screenshot_px`, or `dom_client_rect`. The validator
    rejects anything else.
 3. **Map failure classes.** Free-form framework failure strings get
-   canonicalised against the vocabulary fixed by
-   `src/augur_sdk/_schema/json/failure_class.schema.json`.
-4. **Produce a bundle that passes `validate_bundle()`.** The schemas are
-   vendored at `augur_sdk._schema/json/`; the SDK runs them on every
-   write.
+   canonicalised against the vocabulary fixed by `failure_class.schema.json`
+   in the [`augur-schema`](https://pypi.org/project/augur-schema/) package.
+4. **Produce a bundle that passes `validate_bundle()`.** The canonical
+   schemas come from the `augur-schema` package (pulled in as an SDK
+   dependency); the SDK runs them on every write.
 
 ## Rule pack — write your own diagnostic rules
 
@@ -2862,6 +2938,108 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 `docs/versioning.md` upstream (`MAJOR.MINOR.PATCH`; pre-1.0 minors may break).
 
 ## [Unreleased]
+
+## [0.2.1] — 2026-05-23
+
+### Branching replay — producer-side execution (closes #25)
+
+`DebugSession` already accepted a `branch_context` kwarg in 0.1.14
+(per `augur-schema 0.3.1`), but no producer code path drove it.
+0.2.1 adds the high-level constructor.
+
+- **`DebugSession.branch_from(parent_run_id, branch_point_step_index,
+  mutated_axis, mutation, ...)`** — classmethod that returns a child
+  session pre-stamped with the parent linkage. Counterpart to platform
+  `mercurialsolo/augur#91` (closed); operator surface declared the
+  branch, this lets the SDK actually execute it.
+- **Modes** (`mode=`):
+  - `replay` — load steps `[0, branch_point_step_index)` from a
+    parent bundle (`parent_bundle=<path>`) into the new session,
+    copying pre/post screenshot bytes verbatim. The producer
+    continues fresh from the branch point.
+  - `sandbox` — stamp `branch_context` only; the producer executes
+    from scratch against a live target.
+  - `auto` (default) — picks `sandbox` when `mutated_axis="action"`
+    (action changes break the deterministic-prefix assumption per
+    SPEC §10), `replay` otherwise.
+- **Refuses** `mode="replay"` when `mutated_axis="action"` — replay
+  would lie about what the agent did since the parent's downstream
+  observations no longer reflect what the new agent will see.
+  Per-axis safety enforced at construction time, not at bundle write.
+- **`branch_id` and child `run_id`** default to
+  `f"{parent_run_id}:branch:<short-uuid>"` (per
+  `branch_context.schema.json` convention) — callers can override
+  either independently.
+- **`session.branch_mode`** accessor exposes the resolved mode
+  (`"replay"`, `"sandbox"`, or `None` for production runs).
+
+### Tests
+
+- `tests/test_branch_from.py` (18 tests) — sandbox / replay / auto
+  resolution, prefix loading + screenshot copy from parent bundle,
+  replay-refuses-action-mutation, axis enum validation, branch_id
+  generation, **kwargs pass-through. Full suite: 198 tests, all green.
+
+## [0.2.0] — 2026-05-23
+
+### Schemas now live in the `augur-schema` PyPI package
+
+Closes #20. The SDK no longer vendors its own copy of the canonical
+JSON Schemas. They're shipped by the
+[`augur-schema`](https://pypi.org/project/augur-schema/) package and
+pulled in as a runtime dependency
+(`augur-schema>=0.3.1,<0.4`). Single source of truth across the SDK,
+the platform server, the viewer, and any third-party reader.
+
+- Deleted `src/augur_sdk/_schema/` (the JSON files and the loader
+  module). 17 files removed.
+- `from augur_sdk._schema import …` → `from augur_schema import …` in
+  `session.py`, `bundle.py`, `validation.py`, and all tests. The
+  upstream package re-exports the same surface (`SCHEMA_VERSION`,
+  `SchemaError`, `list_schemas`, `load_schema`, `schemas_dir`,
+  `validator_for`), so the swap is mechanical for callers.
+- `ValidationError` no longer re-exported via `augur_sdk._schema`;
+  callers that need it import directly from `jsonschema.exceptions`
+  (one-line change in two test modules + `session.py`).
+- `bundle.py`'s schema-embed-in-bundle step now copies raw bytes from
+  `augur_schema.schemas_dir()` rather than parse-and-reserialise via
+  `load_schema()`. The embedded copy is bit-for-bit identical to the
+  dep's published schema.
+
+### Schema-side fix consumed in this release
+
+- `branch_context` is now referenced on `debug_session.schema.json`
+  as `anyOf [$ref, null]` (parallel to the existing reference on
+  `step_trace.schema.json`). The SDK already emitted `branch_context`
+  on the session record; with `augur-schema 0.3.1`, validation
+  accepts it. Without the fix, `validate_bundle()` rejected its own
+  branch bundles after the dep swap. Caught by a one-off field-shape
+  diff between the vendored copy and the dep before deletion.
+
+### Minor version bump
+
+The `augur_sdk._schema` module was importable from outside the SDK
+(referenced in 0.1.x docstrings and the bundle-layout doc), so
+removing it is a semver-minor break even though no other public-API
+signature changed. The SDK records, on-disk bundle layout, and
+method surface are unchanged from 0.1.14.
+
+### Records that gain canonical schemas
+
+The upstream package ships new canonical schemas for records the SDK
+already emitted as raw JSON in 0.1.14:
+`reasoning_trace.schema.json`, `outcome_record.schema.json`,
+`eval_candidate.schema.json`, plus standalone files for the
+previously-inlined `branch_context`, `captured_versions`,
+`env_fingerprint`, `judge_decision`, and `side_effect`. Calling
+`validator_for(name)` works the same way for these as for every
+other schema.
+
+### Tests
+
+- 180 tests pass against `augur-schema 0.3.1`. The full quality gate
+  (`uv run pytest`, `uv run mypy -p augur_sdk`, `uv run ruff check`)
+  stays green.
 
 ## [0.1.14] — 2026-05-23
 

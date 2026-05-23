@@ -1335,10 +1335,11 @@ the path in <code>manifest.missing[]</code>. Consumers MUST treat that as
 "intentionally absent" rather than "broken bundle."</p>
 <h2 id="full-spec">Full spec<a class="headerlink" href="#full-spec" title="Permanent link">&para;</a></h2>
 <p>The normative path/format rules are split between the SDK's
-<a href="../../spec/">SPEC.md</a> (producer behaviour) and the vendored JSON
-Schemas at <code>&lt;bundle&gt;/schema/*.schema.json</code>, which are bit-for-bit
-identical to <code>src/augur_sdk/_schema/json/*.schema.json</code> in this repo —
-that's how an offline consumer validates without a network.</p>
+<a href="../../spec/">SPEC.md</a> (producer behaviour) and the canonical JSON
+Schemas shipped by the <a href="https://pypi.org/project/augur-schema/"><code>augur-schema</code></a>
+PyPI package. Every bundle ships bit-for-bit copies under
+<code>&lt;bundle&gt;/schema/*.schema.json</code> so an offline consumer validates
+without a network.</p>
 
 
 

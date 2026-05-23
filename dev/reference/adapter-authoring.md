@@ -115,11 +115,11 @@ Every adapter MUST:
    `device_px`, `screenshot_px`, or `dom_client_rect`. The validator
    rejects anything else.
 3. **Map failure classes.** Free-form framework failure strings get
-   canonicalised against the vocabulary fixed by
-   `src/augur_sdk/_schema/json/failure_class.schema.json`.
-4. **Produce a bundle that passes `validate_bundle()`.** The schemas are
-   vendored at `augur_sdk._schema/json/`; the SDK runs them on every
-   write.
+   canonicalised against the vocabulary fixed by `failure_class.schema.json`
+   in the [`augur-schema`](https://pypi.org/project/augur-schema/) package.
+4. **Produce a bundle that passes `validate_bundle()`.** The canonical
+   schemas come from the `augur-schema` package (pulled in as an SDK
+   dependency); the SDK runs them on every write.
 
 ## Rule pack — write your own diagnostic rules
 
