@@ -172,6 +172,17 @@ existing path without staging a duplicate. Returns the bundle-relative
 path. Step → modelio linkage is path-based; consumers find a step's
 model calls by globbing `modelio/<step:04d>*.json`.
 
+When streaming is enabled (DSN configured), the same call also
+fires the redacted record live to
+`POST /api/v1/runs/<run_id>/modelio/<relpath>` on a background
+thread — producers don't need to wire anything extra; one
+`record_modelio(...)` call covers both the bundle write and the
+live ingest. If the server returns `403` (the tenant hasn't
+enabled modelio capture), the sink latches off for the rest of
+the session and subsequent records skip the network entirely;
+they still land in the bundle on `close()`. All other errors are
+logged at DEBUG and do not disable streaming.
+
 `attach_verifier(step_index, status=..., ...)` lets an external harness
 add a post-hoc verdict to a step the producer left as `unknown` (or
 mis-classified). Useful for trace formats with no native verifier
@@ -361,7 +372,20 @@ class StreamingSink:
     def put_step(self, step: StepTrace) -> None: ...
     def post_events(self, events: list[DecisionEvent], *, step_index: int | None) -> None: ...
     def post_screenshot(self, step_index: int, kind: str, png_bytes: bytes) -> None: ...
+    def post_modelio(self, relpath: str, record: dict[str, Any]) -> None: ...
+    def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None: ...
 ```
+
+`post_modelio(relpath, record)` is driven by `Session.record_modelio()`
+— `relpath` is the bundle-relative path returned by the recorder
+(e.g. `modelio/0003-planner-0.json`), so the live URL is
+`/api/v1/runs/<run_id>/<relpath>`. Fire-and-forget on a background
+thread; a `403` from the server latches the sink off for the
+session (the bundle still owns the record).
+
+`post_logs(text, ...)` is driven by `Session.append_log()` and POSTs
+the chunk to `/api/v1/runs/<run_id>/logs`; the server routes it to
+`logs/<name>.log` or `logs/step-<idx>.log`.
 
 ## Version
 
