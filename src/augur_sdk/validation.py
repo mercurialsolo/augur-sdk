@@ -12,9 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from augur_schema import SCHEMA_VERSION, validator_for
 from jsonschema import ValidationError
-
-from augur_sdk._schema import SCHEMA_VERSION, validator_for
 
 
 @dataclass

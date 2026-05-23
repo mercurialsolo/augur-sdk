@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from augur_sdk._schema import ValidationError, validator_for
+from augur_schema import validator_for
+from jsonschema.exceptions import ValidationError
 
 _VALIDATOR = validator_for("prior_steps")
 

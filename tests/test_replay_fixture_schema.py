@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from augur_sdk._schema import SchemaError, ValidationError, validator_for
+from augur_schema import SchemaError, validator_for
+from jsonschema.exceptions import ValidationError
 
 _VALIDATOR = validator_for("replay_fixture")
 

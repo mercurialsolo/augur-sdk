@@ -56,10 +56,24 @@ wheels = [
 ]
 
 [[package]]
+name = "augur-schema"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "referencing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7b/bb/1038e930623c65d562b5a06ed0cad3290d045bbd516915cbc5f4d06078ab/augur_schema-0.3.1.tar.gz", hash = "sha256:8835544a49d34031498fdd3c698b6f5a546f291330de137529fc3aa903db0270", size = 23638, upload-time = "2026-05-23T17:53:10.799Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/36/8773a728d99804a8d88cdcf26efe58e5186f4d6c6781a7aa4981741f6b41/augur_schema-0.3.1-py3-none-any.whl", hash = "sha256:69dc30a70e36befccb1d9d83119f7f6a97e2d1140c6f8a2d3c0cd5a9d3b3da5c", size = 31305, upload-time = "2026-05-23T17:53:09.468Z" },
+]
+
+[[package]]
 name = "augur-sdk"
-version = "0.1.14"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "augur-schema" },
     { name = "jsonschema" },
     { name = "referencing" },
     { name = "urllib3" },
@@ -80,6 +94,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
+    { name = "augur-schema", specifier = ">=0.3.1,<0.4" },
     { name = "jsonschema", specifier = ">=4.22" },
     { name = "referencing", specifier = ">=0.35" },
     { name = "urllib3", specifier = ">=2" },

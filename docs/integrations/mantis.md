@@ -185,4 +185,5 @@ Mantis's `failure_class.classify()` returns its own vocabulary
 (`cf_challenge`, `nav_timeout`, `wrong_target`, `brain_loop_exhausted`,
 …). The Mantis adapter canonicalises these against the Augur
 failure-class taxonomy; the canonical vocabulary is fixed by the
-vendored schema `src/augur_sdk/_schema/json/failure_class.schema.json`.
+[`failure_class.schema.json`](https://github.com/mercurialsolo/augur/blob/main/packages/schema/augur_schema/json/failure_class.schema.json)
+shipped by the `augur-schema` package.

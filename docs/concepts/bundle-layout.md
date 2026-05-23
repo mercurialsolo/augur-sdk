@@ -94,7 +94,8 @@ the path in `manifest.missing[]`. Consumers MUST treat that as
 ## Full spec
 
 The normative path/format rules are split between the SDK's
-[SPEC.md](../spec.md) (producer behaviour) and the vendored JSON
-Schemas at `<bundle>/schema/*.schema.json`, which are bit-for-bit
-identical to `src/augur_sdk/_schema/json/*.schema.json` in this repo —
-that's how an offline consumer validates without a network.
+[SPEC.md](../spec.md) (producer behaviour) and the canonical JSON
+Schemas shipped by the [`augur-schema`](https://pypi.org/project/augur-schema/)
+PyPI package. Every bundle ships bit-for-bit copies under
+`<bundle>/schema/*.schema.json` so an offline consumer validates
+without a network.

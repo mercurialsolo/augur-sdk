@@ -157,7 +157,7 @@ def test_three_call_round_trip_validates(tmp_path) -> None:
         s.record_modelio(_minimal_modelio(layer="verifier"), step_index=0)
 
     # All three on disk, all valid.
-    from augur_sdk._schema import validator_for
+    from augur_schema import validator_for
 
     val = validator_for("modelio")
     files = sorted((out / "modelio").glob("*.json"))
