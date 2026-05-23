@@ -992,6 +992,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#0111-2026-05-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.11] — 2026-05-22
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.11] — 2026-05-22">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0110-2026-05-21" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1422,6 +1450,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#0111-2026-05-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.11] — 2026-05-22
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.11] — 2026-05-22">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0110-2026-05-21" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1836,6 +1892,21 @@
 <a href="https://keepachangelog.com/">Keep a Changelog</a>, with semver applied per
 <code>docs/versioning.md</code> upstream (<code>MAJOR.MINOR.PATCH</code>; pre-1.0 minors may break).</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="0111-2026-05-22">[0.1.11] — 2026-05-22<a class="headerlink" href="#0111-2026-05-22" title="Permanent link">&para;</a></h2>
+<h3 id="docs">Docs<a class="headerlink" href="#docs" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Document the producer-facing surface for live modelio streaming.
+  <code>Session.record_modelio()</code> now spells out that, with a DSN
+  configured, the same call also POSTs the redacted record to
+  <code>/api/v1/runs/&lt;run_id&gt;/modelio/&lt;relpath&gt;</code> on a background
+  thread, and that a <code>403</code> latches the sink off for the session
+  while the bundle on disk still owns the record.</li>
+<li>Add <code>StreamingSink.post_modelio()</code> and <code>StreamingSink.post_logs()</code>
+  to the streaming class surface in <code>reference/api.md</code> (they
+  shipped in 0.1.10 and 0.1.8 respectively but weren't listed).</li>
+<li>Add the <code>POST /api/v1/runs/{id}/modelio/{relpath}</code> ingest row +
+  curl example to <code>reference/http-api.md</code>.</li>
+</ul>
 <h2 id="0110-2026-05-21">[0.1.10] — 2026-05-21<a class="headerlink" href="#0110-2026-05-21" title="Permanent link">&para;</a></h2>
 <h3 id="streaming">Streaming<a class="headerlink" href="#streaming" title="Permanent link">&para;</a></h3>
 <ul>
