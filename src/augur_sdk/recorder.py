@@ -230,15 +230,16 @@ class EventRecorder:
             step = self._steps.get(step_index)
             if step is None:
                 return False
-            decisions = list(step.get("judge_decisions") or [])
+            existing = step.get("judge_decisions") or []
+            decisions: list[Any] = list(existing)
             decisions.append(deepcopy(decision))
-            step["judge_decisions"] = decisions  # type: ignore[typeddict-item]
+            step["judge_decisions"] = decisions
             if promote_verdict:
                 verdict = decision.get("verdict")
                 if isinstance(verdict, dict):
                     step["verdict"] = dict(verdict)  # type: ignore[typeddict-item]
                 if verdict_source is not None:
-                    step["verdict_source"] = verdict_source  # type: ignore[typeddict-item]
+                    step["verdict_source"] = verdict_source
             return True
 
     def merge_step_env_fingerprint(

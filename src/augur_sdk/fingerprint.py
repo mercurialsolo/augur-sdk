@@ -126,10 +126,9 @@ def resolve_algorithm(
     name = name or DEFAULT_ALGORITHM
     if name in _BUILTIN:
         return _BUILTIN[name]
-    try:
-        eps = entry_points(group="augur_sdk.fingerprints")
-    except TypeError:  # py3.9 compat — unused in this SDK but cheap
-        eps = entry_points().get("augur_sdk.fingerprints", [])  # type: ignore[assignment]
+    # SDK requires py3.11+, so the keyword form of entry_points is always
+    # available — no need for the py3.9 select-via-dict fallback.
+    eps = entry_points(group="augur_sdk.fingerprints")
     for ep in eps:
         if ep.name == name:
             fn = ep.load()

@@ -741,8 +741,10 @@ class DebugSession:
             )
             if cost_summary is not None:
                 record["cost_summary"] = dict(cost_summary)
-            elif isinstance(step.get("costs"), dict):
-                record["cost_summary"] = dict(step["costs"])  # type: ignore[index]
+            else:
+                step_costs = step.get("costs")
+                if isinstance(step_costs, dict):
+                    record["cost_summary"] = dict(step_costs)
         else:
             record["debug_session_id"] = self.debug_session_id
             if verdict is not None:
