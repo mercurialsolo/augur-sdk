@@ -992,6 +992,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#0112-2026-05-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.12] — 2026-05-22
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.12] — 2026-05-22">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0111-2026-05-22" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1004,7 +1032,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#docs" class="md-nav__link">
+  <a href="#docs_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Docs
@@ -1450,6 +1478,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#0112-2026-05-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.12] — 2026-05-22
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.12] — 2026-05-22">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0111-2026-05-22" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1462,7 +1518,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#docs" class="md-nav__link">
+  <a href="#docs_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Docs
@@ -1892,8 +1948,25 @@
 <a href="https://keepachangelog.com/">Keep a Changelog</a>, with semver applied per
 <code>docs/versioning.md</code> upstream (<code>MAJOR.MINOR.PATCH</code>; pre-1.0 minors may break).</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
-<h2 id="0111-2026-05-22">[0.1.11] — 2026-05-22<a class="headerlink" href="#0111-2026-05-22" title="Permanent link">&para;</a></h2>
+<h2 id="0112-2026-05-22">[0.1.12] — 2026-05-22<a class="headerlink" href="#0112-2026-05-22" title="Permanent link">&para;</a></h2>
 <h3 id="docs">Docs<a class="headerlink" href="#docs" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Mirror raw <code>.md</code> alongside every published HTML page on the docs
+  site — e.g. <code>…/latest/reference/api.md</code> returns the canonical
+  markdown source. Coding agents can fetch docs directly without
+  scraping HTML.</li>
+<li>Emit <code>llms.txt</code> and <code>llms-full.txt</code> at the root of each versioned
+  build (<code>…/latest/llms.txt</code>), following the
+  <a href="https://llmstxt.org/">llms.txt</a> convention. <code>llms.txt</code> is a
+  grouped index of every doc page; <code>llms-full.txt</code> is a single-file
+  concatenation of the full corpus in nav order.</li>
+<li>Both are produced by a small mkdocs build hook (<code>hooks/llms_export.py</code>)
+  with no new runtime dependencies. The hook captures each page's
+  markdown after the <code>include-markdown</code> plugin runs, so transcluded
+  content (e.g. the changelog) is inlined in the mirrored <code>.md</code>.</li>
+</ul>
+<h2 id="0111-2026-05-22">[0.1.11] — 2026-05-22<a class="headerlink" href="#0111-2026-05-22" title="Permanent link">&para;</a></h2>
+<h3 id="docs_1">Docs<a class="headerlink" href="#docs_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Document the producer-facing surface for live modelio streaming.
   <code>Session.record_modelio()</code> now spells out that, with a DSN
