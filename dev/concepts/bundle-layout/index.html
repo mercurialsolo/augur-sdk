@@ -363,6 +363,8 @@
       
         
       
+        
+      
     
     
     
@@ -687,6 +689,34 @@
     
   
     Failure-Class Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../trajectory-fingerprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trajectory Fingerprint
   
 
     
@@ -1234,6 +1264,12 @@ viewer, CLI, and coding agents read bundles without configuration.</p>
 </span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    0011-verifier-0.json             # capture_mode=model_io or full
 </span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>  preferences/
 </span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    0011.json                        # DPO / RLHF preference record (since 0.1.6)
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>  side_effects/                      # irreversible-action ledger (since 0.1.14)
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>    0003-se_abc123.json              #   &lt;step:04d&gt;-&lt;side_effect_id&gt;.json
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>  eval_candidates.json               # mark_for_eval tags (since 0.1.14, when present)
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>  outcomes.json                      # finalize_outcome records (since 0.1.14, when present)
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>  events/
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>    reasoning.jsonl                  # record_reasoning records (since 0.1.14, when present)
 </span></code></pre></div>
 <h2 id="why-path-stable">Why path-stable<a class="headerlink" href="#why-path-stable" title="Permanent link">&para;</a></h2>
 <p>A coding agent should not have to <em>discover</em> anything. Once it sniffs

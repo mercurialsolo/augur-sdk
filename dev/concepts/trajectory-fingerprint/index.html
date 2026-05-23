@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://mercurialsolo.github.io/augur-sdk/dev/concepts/capture-modes/">
+        <link rel="canonical" href="https://mercurialsolo.github.io/augur-sdk/dev/concepts/trajectory-fingerprint/">
       
       
-        <link rel="prev" href="../dsn/">
+        <link rel="prev" href="../failure-class-taxonomy/">
       
       
-        <link rel="next" href="../bundle-layout/">
+        <link rel="next" href="../../integrations/python/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Capture Modes - Augur SDK</title>
+        <title>Trajectory Fingerprint - Augur SDK</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#capture-modes" class="md-skip">
+        <a href="#trajectory-fingerprint" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Capture Modes
+              Trajectory Fingerprint
             
           </span>
         </div>
@@ -442,37 +442,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Capture Modes
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../capture-modes/" class="md-nav__link">
         
   
   
@@ -488,81 +461,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The modes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-to-set-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where to set it
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mid-run-upgrade-since-013" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mid-run upgrade (since 0.1.3)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#recommended-deployments" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recommended deployments
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#capture-mode-does-not-control-redaction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Capture mode does NOT control redaction
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -684,10 +582,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../trajectory-fingerprint/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trajectory Fingerprint
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -703,6 +628,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-algorithm-cua_v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default algorithm: cua_v1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plugging-in-a-learned-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plugging in a learned embedding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge cases
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1102,10 +1091,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-modes" class="md-nav__link">
+  <a href="#properties" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The modes
+        Properties
       
     </span>
   </a>
@@ -1113,10 +1102,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-to-set-it" class="md-nav__link">
+  <a href="#default-algorithm-cua_v1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where to set it
+        Default algorithm: cua_v1
       
     </span>
   </a>
@@ -1124,10 +1113,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mid-run-upgrade-since-013" class="md-nav__link">
+  <a href="#plugging-in-a-learned-embedding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mid-run upgrade (since 0.1.3)
+        Plugging in a learned embedding
       
     </span>
   </a>
@@ -1135,21 +1124,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recommended-deployments" class="md-nav__link">
+  <a href="#edge-cases" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recommended deployments
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#capture-mode-does-not-control-redaction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Capture mode does NOT control redaction
+        Edge cases
       
     </span>
   </a>
@@ -1173,7 +1151,7 @@
 
 
   
-    <a href="https://github.com/mercurialsolo/augur-sdk/edit/main/docs/concepts/capture-modes.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/mercurialsolo/augur-sdk/edit/main/docs/concepts/trajectory-fingerprint.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1181,120 +1159,59 @@
   
 
 
-<h1 id="capture-modes">Capture modes<a class="headerlink" href="#capture-modes" title="Permanent link">&para;</a></h1>
-<p>Capture mode is the cost/coverage dial. Pick a low setting for always-on
-fleet observability; promote individual runs to a higher setting when
-you need to debug.</p>
-<h2 id="the-modes">The modes<a class="headerlink" href="#the-modes" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Mode</th>
-<th>What it captures</th>
-<th>Bytes per step</th>
-<th>Cost</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>off</code></td>
-<td>Manifest envelope only</td>
-<td>0</td>
-<td>none</td>
-</tr>
-<tr>
-<td><code>metadata</code></td>
-<td>+ run/step ids, status, action type, failure class</td>
-<td>~0.5 KB</td>
-<td>tiny</td>
-</tr>
-<tr>
-<td><code>trace</code></td>
-<td>+ decisions, verifier output, recovery, grounding summary</td>
-<td>~3 KB</td>
-<td>low</td>
-</tr>
-<tr>
-<td><code>screenshots</code></td>
-<td>+ pre/post PNGs + coordinate overlays</td>
-<td>~800 KB</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>video</code></td>
-<td>+ video / MJPEG references</td>
-<td>reference only</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>model_io</code></td>
-<td>+ prompts, model responses, redacted secrets</td>
-<td>~30 KB</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>dispatch</code></td>
-<td>+ input dispatch details, retries, post-action state checks</td>
-<td>~5 KB</td>
-<td>low</td>
-</tr>
-<tr>
-<td><code>replay</code></td>
-<td>+ observation/task/context state for replay fixtures</td>
-<td>~50 KB</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>full</code></td>
-<td>All above, subject to redaction + retention</td>
-<td>~1 MB</td>
-<td>high</td>
-</tr>
-</tbody>
-</table>
-<p>Modes are <strong>ordered</strong> in code (<code>CaptureMode.SCREENSHOTS &gt; CaptureMode.TRACE</code>),
-so adapters that want to check "is screenshot capture active?" can:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">capture_mode</span> <span class="o">&gt;=</span> <span class="n">CaptureMode</span><span class="o">.</span><span class="n">SCREENSHOTS</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">take_pre_screenshot</span><span class="p">()</span>
+<h1 id="trajectory-fingerprint">Trajectory fingerprint<a class="headerlink" href="#trajectory-fingerprint" title="Permanent link">&para;</a></h1>
+<p>Every bundle ships a <code>trajectory_fingerprint</code> on <code>manifest.json</code>. It is a
+short, deterministic, opaque string that the platform's failure-mode
+clustering pipeline uses as a cheap discriminator — a hand-crafted
+stand-in for a learned trajectory embedding.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&quot;trajectory_fingerprint&quot;: &quot;cua_v1:6cf...e2a8d8...b1c4&quot;
 </span></code></pre></div>
-<h2 id="where-to-set-it">Where to set it<a class="headerlink" href="#where-to-set-it" title="Permanent link">&para;</a></h2>
-<p>In order of precedence:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># 1. Explicit argument — wins</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">DebugSession</span><span class="p">(</span><span class="n">capture_mode</span><span class="o">=</span><span class="n">CaptureMode</span><span class="o">.</span><span class="n">FULL</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># 2. AUGUR_CAPTURE_MODE env var — covers an entire fleet</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># export AUGUR_CAPTURE_MODE=screenshots</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># 3. Default — off</span>
-</span></code></pre></div>
-<h2 id="mid-run-upgrade-since-013">Mid-run upgrade (since 0.1.3)<a class="headerlink" href="#mid-run-upgrade-since-013" title="Permanent link">&para;</a></h2>
-<p>A run can start cheap and upgrade itself. <code>session.set_capture_mode(...)</code>
-stamps an explicit <code>capture_mode</code> field on every subsequent
-<code>record_step</code>, per the optional <code>capture_mode</code> field on
-<code>step_trace.schema.json</code>. The manifest's mode is unchanged; consumers
-see the override on the steps that carry it and inherit the manifest
-mode on the rest.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">with</span> <span class="n">DebugSession</span><span class="p">(</span><span class="n">capture_mode</span><span class="o">=</span><span class="n">CaptureMode</span><span class="o">.</span><span class="n">METADATA</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">():</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">session</span><span class="o">.</span><span class="n">record_step</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">verifier_failed</span><span class="p">:</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>            <span class="c1"># Upgrade so the next steps capture screenshots too.</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>            <span class="n">session</span><span class="o">.</span><span class="n">set_capture_mode</span><span class="p">(</span><span class="s2">&quot;screenshots&quot;</span><span class="p">)</span>
-</span></code></pre></div>
-<p>If the caller has already set <code>capture_mode</code> on the StepTrace dict, the
-override does not clobber it.</p>
-<h2 id="recommended-deployments">Recommended deployments<a class="headerlink" href="#recommended-deployments" title="Permanent link">&para;</a></h2>
+<h2 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h2>
+<p>The fingerprint is:</p>
 <ul>
-<li><strong>Always-on fleet observability</strong>: <code>metadata</code> or <code>trace</code>. Free disk + bandwidth.</li>
-<li><strong>Staging / canary</strong>: <code>screenshots</code>. Useful overlays for grounding bugs.</li>
-<li><strong>Active debugging</strong>: <code>full</code>. Tag the run, rotate retention after a week.</li>
-<li><strong>Sensitive workflows</strong> (PCI, PII): set redaction + drop to <code>metadata</code>
-  unless the operator explicitly opts in.</li>
+<li><strong>deterministic</strong> — two runs with identical step sequences produce
+  identical fingerprints, across SDK versions and machines.</li>
+<li><strong>order-sensitive</strong> — swapping two steps changes the fingerprint.</li>
+<li><strong>locally near-similar</strong> — runs that differ in one step share most of
+  their bigram digest, so a Hamming-style proximity check on the server
+  side picks up close cousins.</li>
+<li><strong>opaque</strong> — consumers MUST NOT parse the body. The <code>cua_v1:</code> prefix
+  is reserved for algorithm versioning.</li>
 </ul>
-<h2 id="capture-mode-does-not-control-redaction">Capture mode does NOT control redaction<a class="headerlink" href="#capture-mode-does-not-control-redaction" title="Permanent link">&para;</a></h2>
-<p>A <code>full</code> capture is still redacted by the active <code>RedactionPolicy</code>. The
-mode controls <strong>what</strong> is captured; the policy controls <strong>how</strong> it is
-written. See <a href="../redaction/">redaction.md</a>.</p>
+<h2 id="default-algorithm-cua_v1">Default algorithm: <code>cua_v1</code><a class="headerlink" href="#default-algorithm-cua_v1" title="Permanent link">&para;</a></h2>
+<p>For each step in order, the algorithm computes a token of the form
+<code>&lt;action.type&gt;:&lt;failure_class|verdict.status&gt;:&lt;normalized_target_label&gt;</code>
+where the target label is lowercased and stripped of whitespace and
+non-alphanumerics so <code>Login button</code> and <code>login-button</code> collide.</p>
+<p>The fingerprint body is:</p>
+<ul>
+<li><code>sha256(linear)[:32]</code> — hash over the ordered concatenation of step
+  tokens.</li>
+<li><code>+</code></li>
+<li><code>sha256(sorted_bigrams)[:32]</code> — hash over the sorted set of bigrams
+  of step tokens.</li>
+</ul>
+<p>The linear half is sensitive to whole-run shape; the bigram half is
+sensitive to local edits. Concatenating gives a 64-char body that
+mixes both.</p>
+<h2 id="plugging-in-a-learned-embedding">Plugging in a learned embedding<a class="headerlink" href="#plugging-in-a-learned-embedding" title="Permanent link">&para;</a></h2>
+<p>Adapters can swap the algorithm without changing the SDK API by
+registering an entry point under the <code>augur_sdk.fingerprints</code> group:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># pyproject.toml</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">[project.entry-points.</span><span class="s2">&quot;augur_sdk.fingerprints&quot;</span><span class="k">]</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">my_embedding_v1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;my_pkg.fingerprint:embed_trajectory&quot;</span>
+</span></code></pre></div>
+<p>The callable takes the list of <code>StepTrace</code> dicts and returns a
+single string. The SDK picks the algorithm at bundle-write time;
+see <code>augur_sdk.fingerprint.resolve_algorithm()</code>.</p>
+<h2 id="edge-cases">Edge cases<a class="headerlink" href="#edge-cases" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Empty trajectories (zero steps) do NOT emit a fingerprint — the
+  field is absent from the manifest, not the empty string.</li>
+<li>Steps without an <code>action.type</code>, <code>failure_class</code>, <code>verdict.status</code>,
+  or <code>grounding.target_label</code> contribute empty tokens — the algorithm
+  is robust to partial step records.</li>
+</ul>
 
 
 

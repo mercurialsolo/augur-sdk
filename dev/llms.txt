@@ -24,6 +24,7 @@ See also `llms-full.txt` for a single-file concatenation.
 - [Redaction](concepts/redaction.md)
 - [Diagnostics](concepts/diagnostics.md)
 - [Failure-Class Taxonomy](concepts/failure-class-taxonomy.md)
+- [Trajectory Fingerprint](concepts/trajectory-fingerprint.md)
 
 ## Integrations
 

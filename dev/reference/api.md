@@ -128,6 +128,107 @@ def record_modelio(
     validate: bool = True,
 ) -> str:  # returns bundle-relative path
     ...
+
+# Sentry-for-CUA primitives (since 0.1.13)
+def set_step_versions(
+    step_index: int,
+    *,
+    model: str | None = None,
+    prompt: str | None = None,
+    prompt_hash: str | None = None,
+    tool_descriptions_hash: str | None = None,
+    code_git_sha: str | None = None,
+    grounder: str | None = None,
+    env_fingerprint_ref: str | None = None,
+) -> None: ...
+
+def attach_env_fingerprint(
+    step_index: int,
+    *,
+    url_host: str | None = None,
+    url_path_template: str | None = None,
+    viewport_hash: str | None = None,
+    dom_hash: str | None = None,
+    api_shapes: dict[str, str] | None = None,
+    extensions: list[str] | None = None,
+) -> None: ...
+
+def record_judge_decision(
+    step_index: int,
+    *,
+    judge_id: str,
+    judge_type: str,                       # rule|model|human|hybrid
+    verdict: dict,                         # {"status": "passed"|…, ...}
+    confidence: float | None = None,
+    evidence_refs: list[str] | None = None,
+    judged_at: str | None = None,
+    promote: bool = True,
+) -> None: ...
+
+# Sentry-for-CUA primitives — round two (since 0.1.14)
+def mark_for_eval(
+    step_index: int,
+    reason: str,
+    *,
+    candidate_cluster_id: str | None = None,
+) -> None: ...
+
+def finalize_outcome(
+    *,
+    scope: str = "session",                # "step" | "session"
+    step_index: int | None = None,
+    verdict: dict | None = None,
+    task_class: str | None = None,
+    cost_summary: dict[str, int | float] | None = None,
+) -> dict: ...
+
+def successful_task_cost_summary() -> dict | None: ...
+
+def record_reasoning(
+    step_index: int | None,
+    text: str,
+    *,
+    tokens: int | None = None,
+    format: str = "adapter_inferred",       # adapter_inferred|claude_extended_thinking|openai_reasoning_summary
+    model: str | None = None,
+    ts: str | None = None,
+) -> dict: ...
+
+def declare_side_effect(
+    step_index: int,
+    resource: str,
+    action: str,
+    *,
+    idempotency_key: str | None = None,
+    reversibility: str = "irreversible",    # irreversible|reversible|compensated
+    compensation_handle: str | None = None,
+    provenance: str = "sdk_declared",       # sdk_declared|adapter_inferred|human_declared
+    side_effect_id: str | None = None,
+) -> str: ...                                # returns side_effect_id
+
+def commit_side_effect(
+    side_effect_id: str,
+    observed_result: Any = None,
+) -> None: ...
+
+def mark_side_effect_aborted(
+    side_effect_id: str,
+    reason: str,
+) -> None: ...
+
+def abort_pending_side_effects(reason: str) -> list[str]: ...
+
+def bind_intervention(
+    adapter: Adapter,
+    *,
+    poll_timeout: float = 25.0,
+) -> InterventionChannel | None: ...
+
+# DebugSession constructor kwarg
+# branch_context: dict | None = None
+# When set, labels the run as a replay branch; lands on the session
+# record and propagates a lightweight slice (no mutation payload) to
+# every step. See BranchContext model.
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -182,6 +283,134 @@ enabled modelio capture), the sink latches off for the rest of
 the session and subsequent records skip the network entirely;
 they still land in the bundle on `close()`. All other errors are
 logged at DEBUG and do not disable streaming.
+
+### Sentry-for-CUA primitives (since 0.1.13)
+
+`set_step_versions(step_index, ...)` stamps version axes onto
+`step.captured_versions`. Used by the platform's causal-attribution
+engine to disentangle which input changed when an outcome moves.
+Partial updates merge; unset arguments are preserved. When
+`record_modelio(step_index=...)` is called, the SDK auto-stamps
+`model` (from `request.model`) and `prompt_hash` onto the same
+block so adapters that already use `record_modelio` get the
+linkage for free.
+
+`attach_env_fingerprint(step_index, ...)` attaches a *structural*
+environment fingerprint to a step: `url_host`, `url_path_template`,
+`viewport_hash`, `dom_hash`, `api_shapes`, and `extensions`. Stored
+side-by-side with the visual fingerprint
+(`observation.hashes.phash_64`), not merged, so the platform's
+determinism checker can attribute drift to agent / model / env
+independently. The SDK never derives `dom_hash` itself — only
+adapters that already probe DOM for diagnostics should populate it,
+which preserves the screenshot-grounded core invariant.
+
+`record_judge_decision(step_index, judge_id, judge_type, verdict, ...)`
+makes rule, model, human, and hybrid judges first-class.
+Decisions accumulate on `step.judge_decisions` (an ordered list)
+and, by default, the supplied `verdict` is also promoted to the
+operative `step.verdict` with `step.verdict_source` set to
+`"<judge_type>:<judge_id>"` for provenance. Pass `promote=False`
+to record the decision without changing the operative verdict.
+`attach_verifier()` now also emits an implicit
+`judge_type="rule"` decision alongside its verdict patch, so the
+legacy entry point preserves provenance too. When streaming is
+enabled, the decision is POSTed live to
+`POST /api/v1/runs/<run_id>/steps/<step_index>/judge-decisions`
+on a background thread.
+
+`manifest.trajectory_fingerprint` is populated automatically at
+session close — a deterministic digest over the
+`(action.type, failure_class|verdict.status, normalized_target_label)`
+sequence. Same shape → same fingerprint; one-step swap → small
+Hamming distance on the bigram half. Algorithm is pluggable via
+the `augur_sdk.fingerprints` entry point group (default = `cua_v1`).
+See [concepts/trajectory-fingerprint.md](../concepts/trajectory-fingerprint.md).
+
+### Eval, outcome, reasoning, branching, side-effects, intervention (since 0.1.14)
+
+`mark_for_eval(step_index, reason, candidate_cluster_id=None)` tags a
+step as a regression-fixture candidate. Idempotent on `step_index` —
+last-write-wins. Tags land in `eval_candidates.json` at the bundle
+root and on the live stream. The tag is value even at rest in the
+bundle; CLI export can read it.
+
+`finalize_outcome(scope=..., step_index=None, verdict=None, task_class=None, cost_summary=None)`
+emits a single coupled record so the cost-per-outcome rollup
+doesn't have to JOIN three independent fields. `scope="step"` records
+one outcome per step; `scope="session"` rolls up per-step `step.costs`
+across the run (session-level `set_costs()` wins ties) and emits a
+session-level outcome. Records land in `outcomes.json` and on the
+live stream. `successful_task_cost_summary()` returns the same
+rolled-up summary in-process for budget asserts in tests.
+
+`record_reasoning(step_index, text, tokens=None, format=..., model=None)`
+captures explicit reasoning for models that emit it (Claude extended
+thinking, OpenAI reasoning summaries). Records land in
+`events/reasoning.jsonl` (one record per line) and on the live stream.
+Reasoning text has its own redaction hook on `RedactionPolicy`:
+`add_reasoning_redactor(fn)` registers a `str -> str` callable that
+runs only over the `text` field of a reasoning record, in addition
+to the regular redaction pipeline. `ModelApiAdapterBase` provides a
+`extract_reasoning_from_response()` static method that pulls
+reasoning blocks out of a Claude or OpenAI response — adapters can
+forward the result straight to `record_reasoning()`.
+
+`declare_side_effect(step_index, resource, action, ...)` declares an
+irreversible action **before dispatch** so the ledger records the
+agent's intent even if the run is killed mid-step. Returns a
+`side_effect_id`. `commit_side_effect(side_effect_id, observed_result)`
+lands the dispatcher's return payload (redacted) under
+`side_effects/<step:04d>-<id>.json`. `mark_side_effect_aborted(sid,
+reason)` is used by the intervention channel when a kill arrives
+between declare and commit. `abort_pending_side_effects(reason)`
+mass-aborts every declared-but-not-committed effect — used by the
+kill handler. All four post live via `StreamingSink.post_side_effect()`.
+
+The `branch_context=` constructor kwarg labels the session as a
+replay-branch trajectory. Required fields:
+
+```python
+DebugSession(
+    run_id="run_b",
+    client_name="...",
+    out_dir="...",
+    branch_context={
+        "parent_run_id": "run_a",
+        "branch_point_step_index": 3,
+        "mutated_axis": "model",                # model|prompt|action|grounder|tool_description
+        "mutation": {"model": "claude-opus-4-7"},
+        "branch_id": "branch_xyz",              # optional
+    },
+)
+```
+
+The full block lands on the session record (with `mutation` payload).
+A lightweight slice (without `mutation`) propagates to every step so
+server-side cohort filters can exclude branches by default without
+joining back to the session. Production runs omit the field — no
+regression.
+
+`bind_intervention(adapter)` wires up a long-poll on
+`GET <DSN-base>/runs/<run_id>/commands` and dispatches received
+commands to the adapter:
+
+| Command            | Adapter hook                                    |
+|--------------------|-------------------------------------------------|
+| `pause`            | `on_pause()`                                    |
+| `resume`           | `on_resume()`                                   |
+| `kill`             | `on_kill()` (after `abort_pending_side_effects`) |
+| `inject_hint`      | `on_inject_hint(text)`                          |
+| `override_action`  | `on_action_override(coords, provenance="human_override")` |
+
+Returns `None` when streaming is disabled (no DSN). The SDK guarantees
+`provenance="human_override"` on operator coordinates so the
+trajectory preserves the SPEC §4 invariant that runtime action
+selection is screenshot-grounded — never silently mixed with grounder
+output. Adapters that don't implement a particular hook see the
+channel degrade to a no-op for that command type. At-least-once
+delivery; SDK dedupes on `command_id`. Every received command is
+logged to the session's decision-event stream with the operator id.
 
 `attach_verifier(step_index, status=..., ...)` lets an external harness
 add a post-hoc verdict to a step the producer left as `unknown` (or
