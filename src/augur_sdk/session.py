@@ -108,6 +108,195 @@ class DebugSession:
         # needs the base URL and token to long-poll.
         self._dsn: DSN | None = parsed_dsn
         self._intervention: InterventionChannel | None = None
+        # #25: set by branch_from() classmethod when constructing a
+        # replay-branch session; None for production runs.
+        self._branch_mode: str | None = None
+
+    # -- branching replay (#25) -----------------------------------------
+
+    @classmethod
+    def branch_from(
+        cls,
+        *,
+        parent_run_id: str,
+        branch_point_step_index: int,
+        mutated_axis: str,
+        mutation: dict[str, Any],
+        client_name: str,
+        out_dir: str | Path,
+        mode: str = "auto",
+        parent_bundle: str | Path | None = None,
+        branch_id: str | None = None,
+        run_id: str | None = None,
+        **session_kwargs: Any,
+    ) -> DebugSession:
+        """Construct a child session that records a replay branch off a parent run.
+
+        The child session is stamped with a ``branch_context`` that
+        carries ``parent_run_id``, ``branch_point_step_index``,
+        ``mutated_axis``, ``mutation``, and ``branch_id`` so the platform
+        can exclude branches from production cohorts by default
+        (`mercurialsolo/augur#91`).
+
+        ``mode`` controls what happens to steps before the branch point:
+
+        - ``replay``: load steps ``[0, branch_point_step_index)`` from
+          ``parent_bundle`` and record them on the new session so the
+          branch's bundle includes the deterministic prefix without
+          re-execution. Per-step pre/post screenshots are copied over
+          when present on disk. Requires ``parent_bundle`` to point at
+          a valid Augur bundle directory.
+        - ``sandbox``: stamp ``branch_context`` only; the producer
+          executes from step 0 against a live sandbox. No prefix loading.
+        - ``auto`` (default): pick ``sandbox`` when ``mutated_axis ==
+          "action"`` (action changes break the deterministic-prefix
+          assumption) and ``replay`` otherwise.
+
+        ``branch_id`` defaults to ``f"{parent_run_id}:branch:<short-uuid>"``;
+        ``run_id`` defaults to ``branch_id``.
+
+        Raises ``ValueError`` for:
+
+        - ``mode == "replay"`` with ``mutated_axis == "action"`` —
+          replay would lie about what the agent did.
+        - ``mode == "replay"`` without ``parent_bundle``.
+        - ``mutated_axis`` outside the canonical 5-axis enum.
+        - ``branch_point_step_index < 0``.
+        """
+        allowed_axes = {"model", "prompt", "action", "grounder", "tool_description"}
+        if mutated_axis not in allowed_axes:
+            raise ValueError(
+                f"mutated_axis must be one of {sorted(allowed_axes)}, "
+                f"got {mutated_axis!r}"
+            )
+        if branch_point_step_index < 0:
+            raise ValueError(
+                f"branch_point_step_index must be >= 0, got {branch_point_step_index}"
+            )
+        if mode not in ("replay", "sandbox", "auto"):
+            raise ValueError(
+                f"mode must be 'replay'|'sandbox'|'auto', got {mode!r}"
+            )
+
+        resolved_mode = mode
+        if resolved_mode == "auto":
+            # SPEC §10: action changes break the deterministic-prefix
+            # assumption, so auto downgrades to sandbox.
+            resolved_mode = "sandbox" if mutated_axis == "action" else "replay"
+
+        if resolved_mode == "replay" and mutated_axis == "action":
+            raise ValueError(
+                "replay mode is unsound when mutated_axis='action' — "
+                "action changes mean the parent's downstream observations "
+                "no longer reflect what the agent will see. Use "
+                "mode='sandbox' to execute fresh against a live target."
+            )
+        if resolved_mode == "replay" and parent_bundle is None:
+            raise ValueError(
+                "replay mode needs parent_bundle to load the deterministic "
+                "prefix from. Pass parent_bundle=<path-to-parent-Augur-bundle> "
+                "or use mode='sandbox'."
+            )
+
+        resolved_branch_id = (
+            branch_id or f"{parent_run_id}:branch:{uuid.uuid4().hex[:8]}"
+        )
+        resolved_run_id = run_id or resolved_branch_id
+
+        branch_context: dict[str, Any] = {
+            "parent_run_id": parent_run_id,
+            "branch_point_step_index": branch_point_step_index,
+            "mutated_axis": mutated_axis,
+            "mutation": dict(mutation),
+            "branch_id": resolved_branch_id,
+        }
+
+        # Strip any conflicting keys callers might pass via **session_kwargs.
+        session_kwargs.pop("run_id", None)
+        session_kwargs.pop("client_name", None)
+        session_kwargs.pop("out_dir", None)
+        session_kwargs.pop("branch_context", None)
+
+        session = cls(
+            run_id=resolved_run_id,
+            client_name=client_name,
+            out_dir=out_dir,
+            branch_context=branch_context,
+            **session_kwargs,
+        )
+
+        # Replay mode: pre-load the parent's prefix into the new session's
+        # recorder. Pre/post screenshot bytes are copied verbatim. The new
+        # session's record_step path will stamp branch_context on every
+        # prefix step automatically (the same way it does for fresh steps).
+        if resolved_mode == "replay":
+            session._preload_parent_prefix(
+                parent_bundle=Path(parent_bundle),  # type: ignore[arg-type]
+                branch_point_step_index=branch_point_step_index,
+            )
+
+        # Expose the resolved mode so callers and tests can introspect.
+        session._branch_mode = resolved_mode
+        return session
+
+    def _preload_parent_prefix(
+        self,
+        *,
+        parent_bundle: Path,
+        branch_point_step_index: int,
+    ) -> None:
+        """Load steps [0, branch_point_step_index) from ``parent_bundle``
+        into this session, copying screenshots verbatim (#25).
+
+        Opens the session for recording so the standard ``record_step``
+        path runs (branch_context stamping, streaming sink). Leaves the
+        session open afterwards — the caller is expected to enter the
+        context manager and continue from ``branch_point_step_index``.
+        """
+        trace_path = parent_bundle / "trace.json"
+        if not trace_path.exists():
+            raise FileNotFoundError(
+                f"parent_bundle does not contain trace.json: {parent_bundle}"
+            )
+        import json as _json
+
+        with trace_path.open(encoding="utf-8") as f:
+            trace = _json.load(f)
+        steps = trace.get("steps") or []
+
+        # Drive record_step through the public API so streaming sinks
+        # and branch_context stamping fire the same way as for fresh
+        # steps. Temporarily open the session so record_step's
+        # _require_open() check passes; this is the only path that
+        # records before the user's `with` block.
+        was_open = self._open
+        self._open = True
+        try:
+            for step in steps:
+                idx = step.get("step_index")
+                if not isinstance(idx, int):
+                    continue
+                if idx >= branch_point_step_index:
+                    break
+                # Copy screenshot bytes for this step before recording it
+                # so attach_observation paths resolve correctly later.
+                for kind in ("pre", "post"):
+                    relpath = step.get(f"observation_{kind}")
+                    if not isinstance(relpath, str) or not relpath.startswith(
+                        "screenshots/"
+                    ):
+                        continue
+                    src = parent_bundle / relpath
+                    if not src.exists():
+                        continue
+                    self._recorder.stage_observation_bytes(
+                        relpath, src.read_bytes()
+                    )
+                # record_step deep-copies so we don't share mutable refs
+                # with the parent bundle.
+                self.record_step(dict(step))  # type: ignore[arg-type]
+        finally:
+            self._open = was_open
 
     # -- lifecycle --
 
@@ -1140,6 +1329,13 @@ class DebugSession:
     @property
     def manifest(self) -> BundleManifest | None:
         return self._manifest
+
+    @property
+    def branch_mode(self) -> str | None:
+        """Resolved branching-replay mode (``replay`` or ``sandbox``)
+        when constructed via :py:meth:`branch_from`; ``None`` for
+        production runs."""
+        return self._branch_mode
 
     @property
     def store(self) -> Store:

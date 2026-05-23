@@ -6,6 +6,47 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-05-23
+
+### Branching replay — producer-side execution (closes #25)
+
+`DebugSession` already accepted a `branch_context` kwarg in 0.1.14
+(per `augur-schema 0.3.1`), but no producer code path drove it.
+0.2.1 adds the high-level constructor.
+
+- **`DebugSession.branch_from(parent_run_id, branch_point_step_index,
+  mutated_axis, mutation, ...)`** — classmethod that returns a child
+  session pre-stamped with the parent linkage. Counterpart to platform
+  `mercurialsolo/augur#91` (closed); operator surface declared the
+  branch, this lets the SDK actually execute it.
+- **Modes** (`mode=`):
+  - `replay` — load steps `[0, branch_point_step_index)` from a
+    parent bundle (`parent_bundle=<path>`) into the new session,
+    copying pre/post screenshot bytes verbatim. The producer
+    continues fresh from the branch point.
+  - `sandbox` — stamp `branch_context` only; the producer executes
+    from scratch against a live target.
+  - `auto` (default) — picks `sandbox` when `mutated_axis="action"`
+    (action changes break the deterministic-prefix assumption per
+    SPEC §10), `replay` otherwise.
+- **Refuses** `mode="replay"` when `mutated_axis="action"` — replay
+  would lie about what the agent did since the parent's downstream
+  observations no longer reflect what the new agent will see.
+  Per-axis safety enforced at construction time, not at bundle write.
+- **`branch_id` and child `run_id`** default to
+  `f"{parent_run_id}:branch:<short-uuid>"` (per
+  `branch_context.schema.json` convention) — callers can override
+  either independently.
+- **`session.branch_mode`** accessor exposes the resolved mode
+  (`"replay"`, `"sandbox"`, or `None` for production runs).
+
+### Tests
+
+- `tests/test_branch_from.py` (18 tests) — sandbox / replay / auto
+  resolution, prefix loading + screenshot copy from parent bundle,
+  replay-refuses-action-mutation, axis enum validation, branch_id
+  generation, **kwargs pass-through. Full suite: 198 tests, all green.
+
 ## [0.2.0] — 2026-05-23
 
 ### Schemas now live in the `augur-schema` PyPI package
