@@ -6,6 +6,22 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.11] — 2026-05-22
+
+### Docs
+
+- Document the producer-facing surface for live modelio streaming.
+  `Session.record_modelio()` now spells out that, with a DSN
+  configured, the same call also POSTs the redacted record to
+  `/api/v1/runs/<run_id>/modelio/<relpath>` on a background
+  thread, and that a `403` latches the sink off for the session
+  while the bundle on disk still owns the record.
+- Add `StreamingSink.post_modelio()` and `StreamingSink.post_logs()`
+  to the streaming class surface in `reference/api.md` (they
+  shipped in 0.1.10 and 0.1.8 respectively but weren't listed).
+- Add the `POST /api/v1/runs/{id}/modelio/{relpath}` ingest row +
+  curl example to `reference/http-api.md`.
+
 ## [0.1.10] — 2026-05-21
 
 ### Streaming

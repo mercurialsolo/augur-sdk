@@ -40,6 +40,7 @@ Admin users can additionally set an `augur_tenant_override` cookie via
 | `PUT`  | `/api/v1/runs/{run_id}/steps/{step_index}`                      | one StepTrace record                                        |
 | `POST` | `/api/v1/runs/{run_id}/events`                                  | `{ events: DecisionEvent[], step_index?: number }`         |
 | `POST` | `/api/v1/runs/{run_id}/screenshots/{step_index}/{kind}`         | multipart form: `image=@shot.png;type=image/png`            |
+| `POST` | `/api/v1/runs/{run_id}/modelio/{relpath}`                       | full modelio record JSON; `relpath` is the SDK-allocated `<step:04d>-<layer>-<seq>.json` (or `run-<layer>-<seq>.json`). `403` ⇒ tenant hasn't enabled modelio capture (SDK latches off for the session) |
 | `POST` | `/api/v1/runs/{run_id}/logs`                                    | JSON: `{text, name?, step_index?}` — appends to `logs/<name>.log` (or `logs/step-<idx>.log` when `step_index` is set), bounded at 1 MB per file |
 | `POST` | `/api/v1/heartbeat`                                              | JSON: `{client_id, client_name?, client_version?, capture_mode?, run_id?, last_event?}` |
 
@@ -95,6 +96,12 @@ curl -X PUT https://augur.example/api/v1/runs/run_abc/steps/0 \
 curl -X POST https://augur.example/api/v1/runs/run_abc/screenshots/0/post \
   -H "Authorization: Bearer $DSN_KEY" \
   -F "image=@post.png;type=image/png"
+
+# Modelio record (one model call's full input + output, live)
+curl -X POST https://augur.example/api/v1/runs/run_abc/modelio/0003-planner-0.json \
+  -H "Authorization: Bearer $DSN_KEY" \
+  -H "Content-Type: application/json" \
+  -d @modelio-0003-planner-0.json
 
 # Log chunk (appended; routes to logs/step-3.log because step_index is set)
 curl -X POST https://augur.example/api/v1/runs/run_abc/logs \
