@@ -32,6 +32,7 @@ _SCHEMA_FILES: dict[str, str] = {
     "decision_event": "decision_event.schema.json",
     "replay_fixture": "replay_fixture.schema.json",
     "modelio": "modelio.schema.json",
+    "side_effect": "side_effect.schema.json",
     "preference": "preference.schema.json",
     "prior_steps": "prior_steps.schema.json",
     "diagnostic_finding": "diagnostic_finding.schema.json",

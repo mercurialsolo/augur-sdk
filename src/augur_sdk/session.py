@@ -23,6 +23,7 @@ from typing import Any
 from augur_sdk._schema import SCHEMA_VERSION, ValidationError, validator_for
 from augur_sdk.bundle import write_bundle
 from augur_sdk.capture import CaptureMode, resolve_capture_mode
+from augur_sdk.intervention import InterventionChannel
 from augur_sdk.models import BundleManifest, DecisionEvent, StepTrace
 from augur_sdk.models import DebugSession as SessionRecord
 from augur_sdk.recorder import EventRecorder
@@ -59,6 +60,7 @@ class DebugSession:
         tags: dict[str, str] | None = None,
         started_at: str | None = None,
         dsn: str | None = None,
+        branch_context: dict[str, Any] | None = None,
     ) -> None:
         self.run_id = run_id
         self.debug_session_id = debug_session_id or _gen_debug_session_id()
@@ -84,6 +86,14 @@ class DebugSession:
         # Session-level cost rollup (#58). Populated by set_costs();
         # surfaces on both the session record and the manifest.
         self._session_costs: dict[str, int | float] = {}
+        # #15: BranchContext labels replay-branch trajectories so
+        # server-side cohort filters can exclude branches by default.
+        # Production runs leave this as None.
+        self._branch_context: dict[str, Any] | None = (
+            self._validate_branch_context(branch_context)
+            if branch_context is not None
+            else None
+        )
         # Optional streaming sink (Sentry-style). DSN arg wins; otherwise
         # consult AUGUR_DSN env var. None disables streaming.
         parsed_dsn = DSN.from_env(dsn)
@@ -92,6 +102,10 @@ class DebugSession:
             if parsed_dsn
             else None
         )
+        # Parsed DSN cached for the intervention channel; bind_intervention
+        # needs the base URL and token to long-poll.
+        self._dsn: DSN | None = parsed_dsn
+        self._intervention: InterventionChannel | None = None
 
     # -- lifecycle --
 
@@ -121,6 +135,11 @@ class DebugSession:
         elif self._status == "running":
             self._status = "succeeded"
         self._ended_at = _utcnow_iso()
+        # #12: stop the intervention long-poll before the bundle write
+        # so a stray late-arriving command can't race the final flush.
+        if self._intervention is not None:
+            self._intervention.stop()
+            self._intervention = None
         record = self._session_record()
         if self.capture_mode is CaptureMode.OFF:
             # Honour the contract: off mode writes only the manifest envelope so
@@ -159,6 +178,11 @@ class DebugSession:
         # record_step calls until explicitly cleared).
         if self._capture_mode_override and "capture_mode" not in step:
             step["capture_mode"] = self._capture_mode_override  # type: ignore[typeddict-unknown-key]
+        # #15: propagate BranchContext (sans mutation payload) to every
+        # step so server-side filters can exclude branches by default
+        # without joining back to the session.
+        if self._branch_context is not None and "branch_context" not in step:
+            step["branch_context"] = self._step_branch_context()  # type: ignore[typeddict-item]
         self._recorder.record_step(step)
         if self._stream is not None:
             redacted = self.redaction_policy.apply(dict(step))
@@ -264,6 +288,26 @@ class DebugSession:
                 f"attach_verifier: no step at step_index={step_index}. "
                 f"Record the step first via record_step()."
             )
+        # #17: emit a JudgeDecision with judge_type="rule" so the
+        # provenance is preserved alongside the operative verdict.
+        # Use a stable, anonymous judge_id since attach_verifier is
+        # the legacy entry point without an explicit judge identity.
+        rule_decision: dict[str, Any] = {
+            "judge_id": check or "attach_verifier",
+            "judge_type": "rule",
+            "verdict": {"status": status},
+            "judged_at": _utcnow_iso(),
+        }
+        if composed_reason is not None:
+            rule_decision["verdict"]["reason"] = composed_reason
+        if evidence_refs is not None:
+            rule_decision["verdict"]["evidence_refs"] = list(evidence_refs)
+            rule_decision["evidence_refs"] = list(evidence_refs)
+        self._recorder.append_judge_decision(
+            step_index,
+            decision=rule_decision,
+            promote_verdict=False,
+        )
         # Echo through the streaming sink so live viewers see the
         # patched verdict without waiting for close().
         if self._stream is not None:
@@ -388,6 +432,551 @@ class DebugSession:
             if patched is not None:
                 self._stream.put_step(self.redaction_policy.apply(dict(patched)))
 
+    def bind_intervention(
+        self,
+        adapter: Any,
+        *,
+        poll_timeout: float = 25.0,
+    ) -> InterventionChannel | None:
+        """Wire up the server→SDK intervention channel (#12).
+
+        Starts a long-poll loop on
+        ``GET <DSN-base>/runs/<run_id>/commands`` that dispatches
+        pause/resume/kill/inject_hint/override_action commands to
+        ``adapter``. Returns the started channel, or ``None`` if
+        streaming is disabled (no DSN configured).
+
+        The channel runs on a background thread; commands arrive
+        between steps with latency bounded by ``poll_timeout``.
+        Adapters that don't implement a particular hook see the
+        channel degrade to a no-op for that command type — never a
+        raised exception.
+
+        Couples to #11: when a ``kill`` command arrives, the channel
+        calls :py:meth:`abort_pending_side_effects` before invoking
+        ``adapter.on_kill()`` so the ledger doesn't show dangling
+        ``intent_only`` declarations.
+        """
+        self._require_open()
+        if self._dsn is None:
+            return None
+        channel = InterventionChannel(
+            session=self,  # type: ignore[arg-type]
+            adapter=adapter,
+            base_url=self._dsn.base_url,
+            token=self._dsn.token,
+            poll_timeout=poll_timeout,
+        )
+        channel.start()
+        self._intervention = channel
+        return channel
+
+    def declare_side_effect(
+        self,
+        step_index: int,
+        resource: str,
+        action: str,
+        *,
+        idempotency_key: str | None = None,
+        reversibility: str = "irreversible",
+        compensation_handle: str | None = None,
+        provenance: str = "sdk_declared",
+        side_effect_id: str | None = None,
+        declared_at: str | None = None,
+    ) -> str:
+        """Declare an irreversible agent action BEFORE dispatch (#11).
+
+        Recording the declaration before dispatch means that, if the
+        run is killed mid-step, the ledger still shows the agent's
+        intent — "the agent was about to charge this card" — even
+        though the commit record never lands.
+
+        Returns the generated ``side_effect_id`` so callers can pass
+        it to :py:meth:`commit_side_effect` after dispatch returns.
+
+        Raises ``ValueError`` for unknown ``reversibility`` or
+        ``provenance``.
+        """
+        self._require_open()
+        if reversibility not in ("irreversible", "reversible", "compensated"):
+            raise ValueError(
+                f"reversibility must be irreversible|reversible|compensated, "
+                f"got {reversibility!r}"
+            )
+        if provenance not in ("sdk_declared", "adapter_inferred", "human_declared"):
+            raise ValueError(
+                f"provenance must be sdk_declared|adapter_inferred|human_declared, "
+                f"got {provenance!r}"
+            )
+        sid = side_effect_id or f"se_{uuid.uuid4().hex[:16]}"
+        record: dict[str, Any] = {
+            "side_effect_id": sid,
+            "step_index": step_index,
+            "resource": resource,
+            "action": action,
+            "reversibility": reversibility,
+            "provenance": provenance,
+            "status": "intent_only",
+            "declared_at": declared_at or _utcnow_iso(),
+        }
+        # Best-effort link to the canonical step_id if the step is
+        # already recorded; producers MAY call declare_side_effect
+        # before record_step lands.
+        step = self._recorder.get_step(step_index)
+        if step is not None:
+            step_id = step.get("step_id")
+            if isinstance(step_id, str):
+                record["step_id"] = step_id
+        if idempotency_key is not None:
+            record["idempotency_key"] = idempotency_key
+        if compensation_handle is not None:
+            record["compensation_handle"] = compensation_handle
+        redacted = self.redaction_policy.apply(record)
+        if not isinstance(redacted, dict):
+            redacted = record
+        self._recorder.stage_side_effect(record=redacted)
+        if self._stream is not None:
+            self._stream.post_side_effect(dict(redacted))
+        return sid
+
+    def commit_side_effect(
+        self,
+        side_effect_id: str,
+        observed_result: Any = None,
+        *,
+        committed_at: str | None = None,
+    ) -> None:
+        """Mark a declared side effect as committed (#11).
+
+        Call after the dispatcher returns. ``observed_result`` is the
+        raw return payload; the session's redaction policy is applied
+        before persistence (PII may live there).
+
+        Raises ``ValueError`` when ``side_effect_id`` is unknown or
+        already terminal.
+        """
+        self._require_open()
+        record = self._recorder.get_side_effect(side_effect_id)
+        if record is None:
+            raise ValueError(
+                f"commit_side_effect: unknown side_effect_id={side_effect_id!r}. "
+                f"Declare it first via declare_side_effect()."
+            )
+        if record.get("status") in ("committed", "aborted"):
+            raise ValueError(
+                f"commit_side_effect: side_effect_id={side_effect_id!r} "
+                f"is already {record['status']!r}"
+            )
+        record["status"] = "committed"
+        record["committed_at"] = committed_at or _utcnow_iso()
+        if observed_result is not None:
+            record["observed_result"] = observed_result
+        redacted = self.redaction_policy.apply(record)
+        if not isinstance(redacted, dict):
+            redacted = record
+        self._recorder.stage_side_effect(record=redacted)
+        if self._stream is not None:
+            self._stream.post_side_effect(dict(redacted))
+
+    def mark_side_effect_aborted(
+        self,
+        side_effect_id: str,
+        reason: str,
+        *,
+        aborted_at: str | None = None,
+    ) -> None:
+        """Mark a declared side effect as aborted (#11).
+
+        Called when a kill signal arrives between declare and commit.
+        The intervention channel (#12) wires kill → mark_aborted for
+        every pending declaration on the runner's behalf, so adapters
+        typically don't need to call this directly.
+        """
+        self._require_open()
+        record = self._recorder.get_side_effect(side_effect_id)
+        if record is None:
+            raise ValueError(
+                f"mark_side_effect_aborted: unknown side_effect_id={side_effect_id!r}"
+            )
+        if record.get("status") in ("committed", "aborted"):
+            raise ValueError(
+                f"mark_side_effect_aborted: side_effect_id={side_effect_id!r} "
+                f"is already {record['status']!r}"
+            )
+        record["status"] = "aborted"
+        record["aborted_at"] = aborted_at or _utcnow_iso()
+        record["abort_reason"] = reason
+        redacted = self.redaction_policy.apply(record)
+        if not isinstance(redacted, dict):
+            redacted = record
+        self._recorder.stage_side_effect(record=redacted)
+        if self._stream is not None:
+            self._stream.post_side_effect(dict(redacted))
+
+    def abort_pending_side_effects(self, reason: str) -> list[str]:
+        """Abort every declared-but-not-committed side effect (#11).
+
+        Returns the list of aborted ``side_effect_id``s. Used by the
+        intervention channel (#12) when a kill command arrives, so
+        the ledger doesn't show declarations dangling at
+        ``intent_only`` forever.
+        """
+        self._require_open()
+        pending = self._recorder.pending_side_effects()
+        aborted: list[str] = []
+        for record in pending:
+            sid = record["side_effect_id"]
+            self.mark_side_effect_aborted(sid, reason=reason)
+            aborted.append(sid)
+        return aborted
+
+    def record_reasoning(
+        self,
+        step_index: int | None,
+        text: str,
+        *,
+        tokens: int | None = None,
+        format: str = "adapter_inferred",
+        model: str | None = None,
+        ts: str | None = None,
+    ) -> dict[str, Any]:
+        """Capture an explicit reasoning trace (#14).
+
+        For models that emit reasoning (Claude extended thinking,
+        OpenAI reasoning summaries), the failure is often visible in
+        the reasoning before the action goes wrong. Today reasoning
+        is stuffed into ``DecisionEvent.detail`` unstructured;
+        ``record_reasoning()`` makes it first-class so the platform
+        can search and filter across.
+
+        Multiple reasoning records per step are allowed (representing
+        multiple model calls per step). Reasoning text is redacted
+        via the session's ``RedactionPolicy.apply_reasoning()`` hook,
+        which runs both the regular redactors and any
+        reasoning-specific redactors registered with
+        ``add_reasoning_redactor()``.
+
+        Returns the redacted trace as recorded.
+        """
+        self._require_open()
+        if format not in (
+            "adapter_inferred",
+            "claude_extended_thinking",
+            "openai_reasoning_summary",
+        ):
+            raise ValueError(
+                f"format must be one of adapter_inferred|"
+                f"claude_extended_thinking|openai_reasoning_summary, "
+                f"got {format!r}"
+            )
+        trace: dict[str, Any] = {
+            "ts": ts or _utcnow_iso(),
+            "text": text,
+            "format": format,
+        }
+        if step_index is not None:
+            trace["step_index"] = step_index
+        if tokens is not None:
+            trace["tokens"] = tokens
+        if model is not None:
+            trace["model"] = model
+        redacted = self.redaction_policy.apply_reasoning(trace)
+        self._recorder.record_reasoning(trace=redacted)
+        if self._stream is not None:
+            self._stream.post_reasoning(dict(redacted))
+        return redacted
+
+    def finalize_outcome(
+        self,
+        *,
+        scope: str = "session",
+        step_index: int | None = None,
+        verdict: dict[str, Any] | None = None,
+        task_class: str | None = None,
+        cost_summary: dict[str, int | float] | None = None,
+    ) -> dict[str, Any]:
+        """Couple verdict + cost + task_class into one OutcomeRecord (#18).
+
+        ``scope="step"`` records a per-step outcome (``step_index``
+        required); ``scope="session"`` rolls up costs and records a
+        single session-level outcome. Both end up in
+        ``outcomes.json`` at the bundle root and on the live stream.
+
+        For ``scope="session"`` when ``cost_summary`` is None, the SDK
+        rolls up:
+          - the session-level costs set via ``set_costs()``;
+          - the sum of per-step ``step.costs`` for any field absent
+            at the session level.
+
+        For ``scope="step"`` when ``verdict`` is None and the step
+        already carries a verdict, that one is used.
+
+        Returns the recorded outcome record.
+        """
+        self._require_open()
+        if scope not in ("step", "session"):
+            raise ValueError(f"scope must be 'step' or 'session', got {scope!r}")
+
+        finalized_at = _utcnow_iso()
+        record: dict[str, Any] = {
+            "scope": scope,
+            "run_id": self.run_id,
+            "finalized_at": finalized_at,
+        }
+        if task_class is not None:
+            record["task_class"] = task_class
+
+        if scope == "step":
+            if step_index is None:
+                raise ValueError("scope='step' requires step_index")
+            step = self._recorder.get_step(step_index)
+            if step is None:
+                raise ValueError(
+                    f"finalize_outcome: no step at step_index={step_index}"
+                )
+            record["step_index"] = step_index
+            record["step_id"] = step.get("step_id")
+            record["verdict"] = (
+                dict(verdict) if verdict is not None else dict(step.get("verdict") or {})
+            )
+            if cost_summary is not None:
+                record["cost_summary"] = dict(cost_summary)
+            else:
+                step_costs = step.get("costs")
+                if isinstance(step_costs, dict):
+                    record["cost_summary"] = dict(step_costs)
+        else:
+            record["debug_session_id"] = self.debug_session_id
+            if verdict is not None:
+                record["verdict"] = dict(verdict)
+            if cost_summary is not None:
+                record["cost_summary"] = dict(cost_summary)
+            else:
+                record["cost_summary"] = self._rolled_up_session_costs()
+
+        self._recorder.stage_outcome(record=record)
+        if self._stream is not None:
+            redacted = self.redaction_policy.apply(dict(record))
+            if isinstance(redacted, dict):
+                self._stream.post_outcome(redacted)
+        return record
+
+    def successful_task_cost_summary(self) -> dict[str, int | float] | None:
+        """Return a rolled-up cost summary for callers who want to
+        assert budgets in-process (#18). Returns None when no costs
+        have been recorded."""
+        rolled = self._rolled_up_session_costs()
+        return rolled or None
+
+    def _rolled_up_session_costs(self) -> dict[str, int | float]:
+        """Combine session-level costs with the sum of per-step costs.
+
+        Session-level fields win for any key they set; absent keys are
+        filled by summing the corresponding per-step values."""
+        summary: dict[str, int | float] = dict(self._session_costs)
+        per_step_totals: dict[str, int | float] = {}
+        for step in self._recorder.all_steps():
+            costs = step.get("costs")
+            if not isinstance(costs, dict):
+                continue
+            for k, v in costs.items():
+                if isinstance(v, (int, float)):
+                    per_step_totals[k] = per_step_totals.get(k, 0) + v
+        for k, v in per_step_totals.items():
+            summary.setdefault(k, v)
+        return summary
+
+    def mark_for_eval(
+        self,
+        step_index: int,
+        reason: str,
+        *,
+        candidate_cluster_id: str | None = None,
+    ) -> None:
+        """Tag a step as a regression-fixture candidate (#16).
+
+        Idempotent on ``step_index`` — repeat calls overwrite the
+        prior tag (last-write-wins). The tag lands in
+        ``eval_candidates.json`` at the bundle root on close, and is
+        POSTed live to the server's promotion endpoint when streaming
+        is enabled. Operates on any step index — even one that
+        hasn't been recorded yet — so producers can mark a step
+        eagerly before its post-action result is known.
+        """
+        self._require_open()
+        record = self._recorder.mark_for_eval(
+            step_index=step_index,
+            reason=reason,
+            candidate_cluster_id=candidate_cluster_id,
+            tagged_at=_utcnow_iso(),
+        )
+        if self._stream is not None:
+            self._stream.post_eval_candidate(dict(record))
+
+    def record_judge_decision(
+        self,
+        step_index: int,
+        *,
+        judge_id: str,
+        judge_type: str,
+        verdict: dict[str, Any],
+        confidence: float | None = None,
+        evidence_refs: list[str] | None = None,
+        judged_at: str | None = None,
+        promote: bool = True,
+    ) -> None:
+        """Record a judge decision against a step (#17).
+
+        ``judge_type`` is one of ``rule``, ``model``, ``human``,
+        ``hybrid``. Multiple judge decisions per step are kept as a
+        sibling list to ``step.verdict``; their provenance is the value
+        of this primitive.
+
+        When ``promote`` is True (default), the supplied ``verdict``
+        becomes the operative ``step.verdict`` and ``step.verdict_source``
+        is set to ``"<judge_type>:<judge_id>"`` so consumers know which
+        judge produced the operative verdict.
+
+        Raises ``ValueError`` for unknown ``judge_type`` or when the
+        step doesn't exist.
+        """
+        self._require_open()
+        if judge_type not in ("rule", "model", "human", "hybrid"):
+            raise ValueError(
+                f"judge_type must be one of rule|model|human|hybrid, "
+                f"got {judge_type!r}"
+            )
+        decision: dict[str, Any] = {
+            "judge_id": judge_id,
+            "judge_type": judge_type,
+            "verdict": dict(verdict),
+        }
+        if confidence is not None:
+            decision["confidence"] = max(0.0, min(1.0, float(confidence)))
+        if evidence_refs is not None:
+            decision["evidence_refs"] = list(evidence_refs)
+        decision["judged_at"] = judged_at or _utcnow_iso()
+        ok = self._recorder.append_judge_decision(
+            step_index,
+            decision=decision,
+            promote_verdict=promote,
+            verdict_source=f"{judge_type}:{judge_id}" if promote else None,
+        )
+        if not ok:
+            raise ValueError(
+                f"record_judge_decision: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            redacted_decision = self.redaction_policy.apply(dict(decision))
+            if isinstance(redacted_decision, dict):
+                self._stream.post_judge_decision(step_index, redacted_decision)
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def attach_env_fingerprint(
+        self,
+        step_index: int,
+        *,
+        url_host: str | None = None,
+        url_path_template: str | None = None,
+        viewport_hash: str | None = None,
+        dom_hash: str | None = None,
+        api_shapes: dict[str, str] | None = None,
+        extensions: list[str] | None = None,
+    ) -> None:
+        """Attach a structural environment fingerprint to a step (#13).
+
+        The visual half lives on the Observation
+        (`observation.hashes.phash_64`); this is the structural half.
+        Stored side-by-side, not merged. Lets the platform's
+        determinism checker attribute drift to agent/model/env
+        independently.
+
+        SDK never derives ``dom_hash`` itself — only adapters that
+        already probe DOM for diagnostics should populate it
+        (preserves the screenshot-grounded core invariant).
+
+        Merges into ``step.env_fingerprint``; unset arguments are
+        preserved. Raises ``ValueError`` if no step exists.
+        """
+        self._require_open()
+        patch: dict[str, Any] = {}
+        for name, value in {
+            "url_host": url_host,
+            "url_path_template": url_path_template,
+            "viewport_hash": viewport_hash,
+            "dom_hash": dom_hash,
+        }.items():
+            if value is not None:
+                patch[name] = value
+        if api_shapes is not None:
+            patch["api_shapes"] = dict(api_shapes)
+        if extensions is not None:
+            patch["extensions"] = list(extensions)
+        if not patch:
+            return
+        ok = self._recorder.merge_step_env_fingerprint(
+            step_index, fingerprint=patch
+        )
+        if not ok:
+            raise ValueError(
+                f"attach_env_fingerprint: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def set_step_versions(
+        self,
+        step_index: int,
+        *,
+        model: str | None = None,
+        prompt: str | None = None,
+        prompt_hash: str | None = None,
+        tool_descriptions_hash: str | None = None,
+        code_git_sha: str | None = None,
+        grounder: str | None = None,
+        env_fingerprint_ref: str | None = None,
+    ) -> None:
+        """Stamp version axes on a previously-recorded step (#10).
+
+        Merges into ``step.captured_versions``; unset arguments are
+        preserved. Used by the platform's causal-attribution engine
+        to disentangle which input changed when an outcome moves.
+        Raises ``ValueError`` if no step exists at ``step_index``.
+        """
+        self._require_open()
+        patch: dict[str, str] = {}
+        for name, value in {
+            "model": model,
+            "prompt": prompt,
+            "prompt_hash": prompt_hash,
+            "tool_descriptions_hash": tool_descriptions_hash,
+            "code_git_sha": code_git_sha,
+            "grounder": grounder,
+            "env_fingerprint_ref": env_fingerprint_ref,
+        }.items():
+            if value is not None:
+                patch[name] = value
+        if not patch:
+            return
+        ok = self._recorder.merge_step_captured_versions(
+            step_index, versions=patch
+        )
+        if not ok:
+            raise ValueError(
+                f"set_step_versions: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
     def record_modelio(
         self,
         record: dict[str, Any],
@@ -459,7 +1048,43 @@ class DebugSession:
         )
         if self._stream is not None:
             self._stream.post_modelio(relpath, dict(staged))
+        # #10: auto-stamp captured_versions on the corresponding step
+        # so the platform's causal-attribution engine can disentangle
+        # which input changed when an outcome moves. Last-write-wins.
+        if step_index is not None:
+            self._autostamp_captured_versions(
+                step_index=step_index, record=rec, prompt_hash=prompt_hash
+            )
         return relpath
+
+    def _autostamp_captured_versions(
+        self,
+        *,
+        step_index: int,
+        record: dict[str, Any],
+        prompt_hash: str | None,
+    ) -> None:
+        """Pick out the version axes the modelio record happens to carry
+        and merge them onto step.captured_versions. Silent no-op if the
+        step hasn't been recorded yet — late callers can still use
+        set_step_versions() explicitly."""
+        if self._recorder.get_step(step_index) is None:
+            return
+        patch: dict[str, str] = {}
+        request = record.get("request")
+        if isinstance(request, dict):
+            model = request.get("model")
+            if isinstance(model, str):
+                patch["model"] = model
+        if isinstance(prompt_hash, str):
+            patch["prompt_hash"] = prompt_hash
+        if not patch:
+            return
+        self._recorder.merge_step_captured_versions(step_index, versions=patch)
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
 
     def append_log(
         self,
@@ -524,9 +1149,43 @@ class DebugSession:
 
     # -- internals --
 
+    @staticmethod
+    def _validate_branch_context(ctx: dict[str, Any]) -> dict[str, Any]:
+        """Sanity-check a BranchContext at construction time so producer
+        bugs (missing axis, unknown axis) surface immediately rather
+        than at bundle write."""
+        required = ("parent_run_id", "branch_point_step_index", "mutated_axis")
+        for field in required:
+            if field not in ctx:
+                raise ValueError(
+                    f"BranchContext missing required field: {field!r}"
+                )
+        allowed = {"model", "prompt", "action", "grounder", "tool_description"}
+        if ctx["mutated_axis"] not in allowed:
+            raise ValueError(
+                f"BranchContext.mutated_axis must be one of {sorted(allowed)}, "
+                f"got {ctx['mutated_axis']!r}"
+            )
+        return dict(ctx)
+
     def _require_open(self) -> None:
         if not self._open:
             raise RuntimeError("DebugSession is closed; create a new one to record more")
+
+    def _step_branch_context(self) -> dict[str, Any]:
+        """The slice of branch_context that lands on each step — the
+        mutation payload stays at session level only."""
+        if self._branch_context is None:
+            return {}
+        ctx = self._branch_context
+        out: dict[str, Any] = {
+            "parent_run_id": ctx["parent_run_id"],
+            "branch_point_step_index": ctx["branch_point_step_index"],
+            "mutated_axis": ctx["mutated_axis"],
+        }
+        if "branch_id" in ctx:
+            out["branch_id"] = ctx["branch_id"]
+        return out
 
     def _session_record(self) -> SessionRecord:
         client: dict[str, Any] = {"name": self._client_name}
@@ -552,6 +1211,8 @@ class DebugSession:
             record["live"] = dict(self._live_endpoints)  # type: ignore[typeddict-item]
         if self._session_costs:
             record["costs"] = dict(self._session_costs)  # type: ignore[typeddict-unknown-key]
+        if self._branch_context is not None:
+            record["branch_context"] = dict(self._branch_context)  # type: ignore[typeddict-item]
         return record
 
 

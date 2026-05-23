@@ -6,6 +6,154 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.14] — 2026-05-23
+
+### Sentry-for-CUA primitives — round two (umbrella #9)
+
+- **`mark_for_eval()`** (closes #16). Tag a step as a
+  regression-fixture candidate so server-side promotion can
+  one-click it into the eval set. Tags land in
+  `eval_candidates.json` at the bundle root and on the live stream
+  via `StreamingSink.post_eval_candidate()`. Idempotent on
+  `step_index` — last-write-wins. Tagging is allowed before
+  `record_step()` lands.
+- **`finalize_outcome()`** (closes #18). Couples
+  `(verdict, task_class, cost_summary)` into one OutcomeRecord per
+  step or session so the platform's cost-per-outcome rollup doesn't
+  need to JOIN three independent fields. Session scope rolls up
+  per-step `step.costs` for any field absent at the session level
+  (session-level `set_costs()` wins ties). Records land in
+  `outcomes.json` at the bundle root and on the live stream via
+  `StreamingSink.post_outcome()`. New helper
+  `session.successful_task_cost_summary()` returns the rolled-up
+  summary in-process for budget asserts in tests.
+- **`record_reasoning()`** (closes #14). First-class capture for
+  models that emit explicit reasoning (Claude extended thinking,
+  OpenAI reasoning summaries). Records land in
+  `events/reasoning.jsonl` and on the live stream via
+  `StreamingSink.post_reasoning()`. Reasoning text gets its own
+  redaction hook on `RedactionPolicy` (`add_reasoning_redactor`,
+  `apply_reasoning`) distinct from the regular redactors —
+  reasoning often carries PII that the action stream doesn't.
+  `ModelApiAdapterBase.extract_reasoning_from_response()` pulls
+  reasoning blocks out of a Claude or OpenAI response without
+  caller wiring.
+- **`BranchContext`** (closes #15). New `branch_context=` kwarg on
+  `DebugSession` labels replay-branch trajectories with
+  `parent_run_id`, `branch_point_step_index`, `mutated_axis`
+  (`model|prompt|action|grounder|tool_description`), and the
+  mutation payload. The full context lands on the session record;
+  a lightweight slice (without the mutation payload) propagates to
+  every step so server-side cohort filters can exclude branches
+  by default without joining back to the session. Production runs
+  omit the field — no regression for callers that don't opt in.
+- **Side-effect ledger API** (closes #11). New
+  `declare_side_effect(step_index, resource, action, ...)` /
+  `commit_side_effect(side_effect_id, observed_result)` /
+  `mark_side_effect_aborted(side_effect_id, reason)` /
+  `abort_pending_side_effects(reason)` API for irreversible agent
+  actions. Declarations land before dispatch so the ledger shows
+  the agent's intent even when the run is killed mid-step.
+  Records live under `side_effects/<step:04d>-<id>.json` keyed to
+  `(run_id, step_id, side_effect_id)`. Redaction policy applies
+  to both `resource` and `observed_result`. New
+  `Adapter.on_side_effect()` hook so adapters can auto-detect
+  known irreversible action types. `StreamingSink.post_side_effect()`
+  posts the full lifecycle live. New canonical
+  `side_effect.schema.json` bundled with every release.
+- **Intervention channel** (closes #12). Server→SDK control plane.
+  New `session.bind_intervention(adapter)` starts a long-poll on
+  `GET /runs/<run_id>/commands`, dispatching `pause`, `resume`,
+  `kill`, `inject_hint`, and `override_action` to the adapter's
+  intervention hooks (`on_pause`, `on_resume`, `on_kill`,
+  `on_inject_hint`, `on_action_override`). Operator-supplied
+  coordinates always carry `provenance="human_override"` so the
+  trajectory preserves the SPEC §4 invariant that runtime action
+  selection is screenshot-grounded. `kill` couples to the
+  side-effect ledger (#11) — the channel aborts every pending
+  declared side effect before invoking `adapter.on_kill()`.
+  Adapters that don't implement a particular hook see the channel
+  degrade to a no-op for that command type. At-least-once
+  delivery with idempotency keys on `command_id`; cursor-based
+  resumption so a dropped poll doesn't lose commands. Audit
+  trail: every received command is logged to the session's
+  decision-event stream with the operator id.
+
+### Bundle layout
+
+- New top-level paths: `side_effects/` (ledger),
+  `eval_candidates.json` (#16 tags), `outcomes.json` (#18 coupled
+  records), `events/reasoning.jsonl` (#14 reasoning). All
+  reflected in `manifest.paths` and `manifest.signatures`.
+
+### Models
+
+- `BranchContext`, `SideEffect`, and `InterventionCommand` are now
+  re-exported from `augur_sdk` for adapter authors.
+
+### Tests
+
+- 49 new tests across `tests/test_branching.py`,
+  `tests/test_eval_candidates.py`, `tests/test_intervention.py`,
+  `tests/test_outcomes.py`, `tests/test_reasoning.py`,
+  `tests/test_side_effects.py`. Full suite: 180 tests, all green.
+
+## [0.1.13] — 2026-05-23
+
+### Sentry-for-CUA primitives (umbrella #9)
+
+- **`captured_versions` on every StepTrace** (closes #10). Promoted
+  from `ReplayFixture`-only to a first-class field. Extended with
+  `prompt_hash`, `tool_descriptions_hash`, and `env_fingerprint_ref`.
+  New `DebugSession.set_step_versions(step_index, model=…, prompt_hash=…)`
+  accepts partial updates and merges last-write-wins.
+  `record_modelio()` auto-stamps `model` (from `request.model`) and
+  `prompt_hash` onto the corresponding step's `captured_versions`
+  when called with `step_index=…`. Silent no-op if the step hasn't
+  been recorded yet — late stamping uses the explicit setter.
+- **`env_fingerprint` on Observation + StepTrace** (closes #13). New
+  `DebugSession.attach_env_fingerprint(step_index, url_host=…,
+  url_path_template=…, viewport_hash=…, dom_hash=…, api_shapes=…,
+  extensions=…)`. Stored side-by-side with the visual fingerprint
+  (`observation.hashes.phash_64`), not merged, so the platform's
+  determinism checker can attribute drift to agent/model/env
+  independently. SDK never derives `dom_hash` itself — only adapters
+  that already probe DOM for diagnostics should populate it
+  (preserves the screenshot-grounded core invariant).
+- **`record_judge_decision()`** (closes #17). Model, rule, human,
+  and hybrid judges land as first-class verdicts on
+  `step.judge_decisions`. The operative `step.verdict` is set
+  last-write-wins by default; `step.verdict_source` carries
+  `<judge_type>:<judge_id>` provenance. `attach_verifier()` now
+  emits an implicit `judge_type="rule"` decision alongside its
+  verdict patch so the rule-vs-model-vs-human provenance is
+  preserved across the legacy entry point too. New
+  `StreamingSink.post_judge_decision()` fire-and-forget hook so
+  HITL overrides land live.
+- **`trajectory_fingerprint` on every manifest** (closes #19).
+  Deterministic, hand-crafted digest over the
+  `(action.type, failure_class|verdict.status, normalized_target_label)`
+  sequence of the run. Same shape → same fingerprint, across SDK
+  versions and machines. One-step swap → close-but-different
+  fingerprint (Hamming-style proximity on the bigram half). The
+  algorithm is pluggable via the `augur_sdk.fingerprints` entry
+  point group — adapters can swap in a learned embedding without
+  changing the SDK API. Documented at
+  `docs/concepts/trajectory-fingerprint.md`. Default = `cua_v1`.
+
+### Models
+
+- `JudgeDecision`, `EnvFingerprint`, and `CapturedVersions` are now
+  re-exported from `augur_sdk` for adapter authors.
+
+### Tests
+
+- `tests/test_captured_versions.py`, `tests/test_env_fingerprint.py`,
+  `tests/test_judge_decisions.py`, `tests/test_fingerprint.py` — full
+  round-trip coverage including streaming hooks, validation against
+  the bundled schemas, and backward compat for bundles without the
+  new fields.
+
 ## [0.1.12] — 2026-05-22
 
 ### Docs

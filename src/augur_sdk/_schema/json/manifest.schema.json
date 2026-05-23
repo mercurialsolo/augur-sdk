@@ -75,6 +75,7 @@
         "replay": {"type": "string", "const": "replay/"},
         "diagnostics": {"type": "string", "const": "diagnostics/"},
         "modelio": {"type": "string", "const": "modelio/"},
+        "side_effects": {"type": "string", "const": "side_effects/"},
         "preferences": {"type": "string", "const": "preferences/"},
         "schema": {"type": "string", "const": "schema/"},
         "agent": {"type": "string", "const": "AGENT.md"}
@@ -101,6 +102,10 @@
         "type": "string",
         "pattern": "^[0-9a-f]{64}$"
       }
+    },
+    "trajectory_fingerprint": {
+      "type": "string",
+      "description": "Deterministic fingerprint over the (action, failure_or_verdict, target_label) sequence of the run. Opaque to consumers; used by the platform's failure-mode clustering as a cheap discriminator. Prefix encodes the algorithm (`cua_v1:…`). Closes #19."
     },
     "missing": {
       "type": "array",

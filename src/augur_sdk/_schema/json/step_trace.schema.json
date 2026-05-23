@@ -165,6 +165,85 @@
       "type": "array",
       "description": "Bundle-relative log references. May include `#L<line>` or `#L<start>-L<end>` anchors.",
       "items": {"type": "string"}
+    },
+    "captured_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-step version axes used by the platform's causal-attribution engine to disentangle which input changed when an outcome moves. All fields optional. Auto-stamped by `session.record_modelio()` (model + prompt_hash) and extensible via `session.set_step_versions()`. Closes #10.",
+      "properties": {
+        "model":                   {"type": "string"},
+        "prompt":                  {"type": "string"},
+        "prompt_hash":             {"type": "string"},
+        "tool_descriptions_hash":  {"type": "string"},
+        "code_git_sha":            {"type": "string"},
+        "grounder":                {"type": "string"},
+        "env_fingerprint_ref":     {"type": "string"}
+      }
+    },
+    "judge_decisions": {
+      "type": "array",
+      "description": "Per-step judge decisions — rule-based, model-based, human, or hybrid. A sibling list to the operative `verdict` block; preserves provenance so the platform can compare rule-vs-model-vs-human verdicts and route confidence-aware alerts. Closes #17.",
+      "items": {
+        "type": "object",
+        "required": ["judge_id", "judge_type", "verdict"],
+        "additionalProperties": false,
+        "properties": {
+          "judge_id":     {"type": "string"},
+          "judge_type":   {"type": "string", "enum": ["rule", "model", "human", "hybrid"]},
+          "verdict": {
+            "type": "object",
+            "required": ["status"],
+            "additionalProperties": false,
+            "properties": {
+              "status":        {"type": "string", "enum": ["passed", "failed", "recoverable", "skipped", "unknown"]},
+              "reason":        {"type": "string"},
+              "score":         {"type": "number", "minimum": 0, "maximum": 1},
+              "evidence_refs": {"type": "array", "items": {"type": "string"}}
+            }
+          },
+          "confidence":    {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "judged_at":     {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    "verdict_source": {
+      "type": "string",
+      "description": "Identifies which judge produced the operative `verdict` block when judge_decisions is non-empty. By convention: `<judge_type>:<judge_id>` (e.g. `human:reviewer42`). Closes #17."
+    },
+    "branch_context": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Propagated from the session-level branch_context onto every step so server-side filters can exclude replay-branch trajectories from production cohorts by default. Closes #15.",
+      "required": ["parent_run_id", "branch_point_step_index", "mutated_axis"],
+      "properties": {
+        "parent_run_id":            {"type": "string"},
+        "branch_point_step_index":  {"type": "integer", "minimum": 0},
+        "mutated_axis": {
+          "type": "string",
+          "enum": ["model", "prompt", "action", "grounder", "tool_description"]
+        },
+        "branch_id":                {"type": "string"}
+      }
+    },
+    "env_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structural environment fingerprint at step time. Stored side-by-side with the visual fingerprint (observation.hashes.phash_64), not merged. Lets the platform's determinism checker attribute drift to agent/model/env independently. Closes #13.",
+      "properties": {
+        "url_host":         {"type": "string"},
+        "url_path_template": {"type": "string"},
+        "viewport_hash":    {"type": "string"},
+        "dom_hash":         {"type": "string"},
+        "api_shapes":       {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "extensions":       {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
     }
   }
 }

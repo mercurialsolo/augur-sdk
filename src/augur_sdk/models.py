@@ -85,6 +85,62 @@ class ObservationRedaction(TypedDict, total=False):
     regions: list[RedactionRegion]
 
 
+InterventionType = Literal[
+    "pause", "resume", "kill", "inject_hint", "override_action"
+]
+
+
+class InterventionCommand(TypedDict, total=False):
+    command_id: str
+    type: InterventionType
+    issued_at: str
+    operator_id: str
+    payload: dict[str, Any]
+
+
+Reversibility = Literal["irreversible", "reversible", "compensated"]
+SideEffectStatus = Literal["intent_only", "committed", "aborted"]
+SideEffectProvenance = Literal["sdk_declared", "adapter_inferred", "human_declared"]
+
+
+class SideEffect(TypedDict, total=False):
+    side_effect_id: str
+    step_index: int
+    step_id: str
+    resource: str
+    action: str
+    idempotency_key: str
+    reversibility: Reversibility
+    compensation_handle: str
+    provenance: SideEffectProvenance
+    status: SideEffectStatus
+    declared_at: str
+    committed_at: str | None
+    aborted_at: str | None
+    observed_result: Any
+    abort_reason: str
+
+
+MutatedAxis = Literal["model", "prompt", "action", "grounder", "tool_description"]
+
+
+class BranchContext(TypedDict, total=False):
+    parent_run_id: str
+    branch_point_step_index: int
+    mutated_axis: MutatedAxis
+    mutation: dict[str, Any]
+    branch_id: str
+
+
+class EnvFingerprint(TypedDict, total=False):
+    url_host: str
+    url_path_template: str
+    viewport_hash: str
+    dom_hash: str
+    api_shapes: dict[str, str]
+    extensions: list[str]
+
+
 class Observation(TypedDict, total=False):
     artifact: str
     media_type: Literal["image/png", "image/jpeg", "image/webp"]
@@ -98,6 +154,7 @@ class Observation(TypedDict, total=False):
     hashes: Hashes
     redaction: ObservationRedaction
     missing: bool
+    env_fingerprint: EnvFingerprint
 
 
 class Action(TypedDict, total=False):
@@ -127,6 +184,34 @@ class Verdict(TypedDict, total=False):
     evidence_refs: list[str]
 
 
+ReasoningFormat = Literal[
+    "adapter_inferred",
+    "claude_extended_thinking",
+    "openai_reasoning_summary",
+]
+
+
+class ReasoningTrace(TypedDict, total=False):
+    ts: str
+    step_index: int
+    text: str
+    tokens: int
+    format: ReasoningFormat
+    model: str
+
+
+JudgeType = Literal["rule", "model", "human", "hybrid"]
+
+
+class JudgeDecision(TypedDict, total=False):
+    judge_id: str
+    judge_type: JudgeType
+    verdict: Verdict
+    confidence: float
+    evidence_refs: list[str]
+    judged_at: str
+
+
 class RecoveryDecision(TypedDict, total=False):
     type: RecoveryType
     reason: str
@@ -152,6 +237,11 @@ class StepTrace(TypedDict, total=False):
     recovery_decision: RecoveryDecision | None
     events: list[str]
     logs: list[str]
+    captured_versions: CapturedVersions
+    env_fingerprint: EnvFingerprint
+    judge_decisions: list[JudgeDecision]
+    verdict_source: str
+    branch_context: BranchContext | None
 
 
 class DecisionEvent(TypedDict, total=False):
@@ -182,6 +272,7 @@ class DebugSession(TypedDict, total=False):
     trace_uri: str
     live: LiveEndpoints | None
     tags: dict[str, str]
+    branch_context: BranchContext | None
 
 
 class ReplayExpected(TypedDict, total=False):
@@ -193,8 +284,11 @@ class ReplayExpected(TypedDict, total=False):
 class CapturedVersions(TypedDict, total=False):
     model: str
     prompt: str
+    prompt_hash: str
+    tool_descriptions_hash: str
     code_git_sha: str
     grounder: str
+    env_fingerprint_ref: str
 
 
 class ReplayFixture(TypedDict, total=False):
@@ -263,3 +357,4 @@ class BundleManifest(TypedDict, total=False):
     paths: BundlePaths
     signatures: NotRequired[dict[str, str]]
     missing: NotRequired[list[str]]
+    trajectory_fingerprint: NotRequired[str]

@@ -162,6 +162,75 @@ class StreamingSink:
         path = f"/runs/{run_id}/{relpath}"
         self._spawn(lambda: self._post_modelio_request(path, record))
 
+    def post_side_effect(self, record: dict[str, Any]) -> None:
+        """POST a side-effect ledger record to the server (#11).
+
+        Each call posts the latest state of the side-effect (declared,
+        committed, or aborted) so the server-side ledger reflects the
+        full lifecycle even if the run is killed mid-step. Fire-and-
+        forget on the background thread."""
+        run_id = self._run_id or "unknown"
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/side-effects", dict(record), method="POST"
+            )
+        )
+
+    def post_reasoning(self, trace: dict[str, Any]) -> None:
+        """POST a reasoning record to the server (#14).
+
+        Fires on the same fire-and-forget background thread so the
+        runner is never blocked on a slow server."""
+        run_id = self._run_id or "unknown"
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/reasoning", dict(trace), method="POST"
+            )
+        )
+
+    def post_outcome(self, outcome: dict[str, Any]) -> None:
+        """POST a finalize_outcome record to the server (#18).
+
+        Fires on the same fire-and-forget background thread."""
+        run_id = self._run_id or "unknown"
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/outcomes", dict(outcome), method="POST"
+            )
+        )
+
+    def post_eval_candidate(self, candidate: dict[str, Any]) -> None:
+        """POST an eval-candidate tag to the server (#16).
+
+        Fires on the same fire-and-forget background thread. The
+        server's promotion endpoint can react in real time without
+        waiting for session close."""
+        run_id = self._run_id or "unknown"
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/eval-candidates", dict(candidate), method="POST"
+            )
+        )
+
+    def post_judge_decision(
+        self, step_index: int, decision: dict[str, Any]
+    ) -> None:
+        """POST a judge decision to the server (#17).
+
+        Fires on the same fire-and-forget background thread as steps/
+        events; the local bundle on close is the source of truth.
+        """
+        run_id = self._run_id or "unknown"
+        body = dict(decision)
+        body["step_index"] = step_index
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/steps/{step_index}/judge-decisions",
+                body,
+                method="POST",
+            )
+        )
+
     def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None:
         """Append a text chunk to the server's logs/ directory (#17).
 
