@@ -41,6 +41,9 @@ plugins:
   - search
   - include-markdown
 
+hooks:
+  - hooks/llms_export.py
+
 markdown_extensions:
   - admonition
   - attr_list

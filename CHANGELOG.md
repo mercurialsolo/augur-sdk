@@ -6,6 +6,24 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.1.12] — 2026-05-22
+
+### Docs
+
+- Mirror raw `.md` alongside every published HTML page on the docs
+  site — e.g. `…/latest/reference/api.md` returns the canonical
+  markdown source. Coding agents can fetch docs directly without
+  scraping HTML.
+- Emit `llms.txt` and `llms-full.txt` at the root of each versioned
+  build (`…/latest/llms.txt`), following the
+  [llms.txt](https://llmstxt.org/) convention. `llms.txt` is a
+  grouped index of every doc page; `llms-full.txt` is a single-file
+  concatenation of the full corpus in nav order.
+- Both are produced by a small mkdocs build hook (`hooks/llms_export.py`)
+  with no new runtime dependencies. The hook captures each page's
+  markdown after the `include-markdown` plugin runs, so transcluded
+  content (e.g. the changelog) is inlined in the mirrored `.md`.
+
 ## [0.1.11] — 2026-05-22
 
 ### Docs
