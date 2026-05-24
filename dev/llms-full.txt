@@ -2939,6 +2939,49 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-05-23
+
+### StreamingSink honours 429 + Retry-After (closes #27)
+
+`augur#114` made the high-frequency ingest endpoints async on the server
+side. The happy path now returns `202 Accepted` (already handled — any
+2xx counted as success) and a saturated ingest queue returns
+`429 Too Many Requests` with `Retry-After: <seconds>`. Before 0.2.2 the
+SDK debug-logged the 429 and dropped the step — the producer thought the
+write landed; the server never got it.
+
+- **Shared `_request_with_retry` helper.** Every HTTP call site now
+  routes through one place. On 429 it sleeps the parsed `Retry-After`
+  value, reissues the request exactly once, and if the second attempt
+  also 429s emits a `WARNING` (`"augur ingest dropped after retry: …"`)
+  and returns. Single retry only — no unbounded loop, no SDK-side
+  buffer. The local bundle on disk remains authoritative.
+- **Endpoints covered.** `_post_json` (steps / trace / events /
+  side-effects / reasoning / outcomes / eval-candidates /
+  judge-decisions / logs), `_post_modelio_request`,
+  `_post_multipart` (screenshots), and `_send_heartbeat` — all share
+  the same retry behaviour. Modelio's existing 403-latch (tenant
+  opt-in) is preserved across the retry path.
+- **`_parse_retry_after` helper.** Parses augur's integer
+  delta-seconds form, falls back to `1.0s` on HTTP-date / missing /
+  garbage, and clamps the result to `[0, 30]` so a malformed or
+  hostile header cannot park a background thread.
+- **Idempotency.** Server endpoints are idempotent on
+  `(run_id, step_index)` for steps, on `(run_id, manifest)` for
+  trace, and heartbeats are at-most-once by nature, so a single retry
+  after 429 never double-writes.
+
+### Tests
+
+- `tests/test_streaming_backpressure.py` (16 tests) — `_parse_retry_after`
+  unit tests (integer / float / whitespace / missing / garbage /
+  negative-clamp / huge-clamp), `_post_json` 202 pass-through, 429 →
+  202 retry, double-429 drop + warn, sleep value verification,
+  default-sleep when `Retry-After` is missing, plus parallel retry
+  coverage for `_post_multipart`, `_send_heartbeat`, and modelio
+  (including the modelio 403-latch interaction after a 429 retry).
+  Full suite: 214 tests, all green.
+
 ## [0.2.1] — 2026-05-23
 
 ### Branching replay — producer-side execution (closes #25)
