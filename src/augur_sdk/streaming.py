@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import threading
+import time
 import urllib.parse
 import uuid
 from dataclasses import dataclass
@@ -26,6 +27,27 @@ import urllib3
 from augur_sdk.models import DecisionEvent, StepTrace
 
 logger = logging.getLogger(__name__)
+
+# Upper bound on Retry-After to avoid a malformed/hostile header parking a
+# background thread. The server emits single-digit second values in practice.
+_RETRY_AFTER_MAX_SECONDS = 30.0
+_RETRY_AFTER_DEFAULT_SECONDS = 1.0
+
+
+def _parse_retry_after(value: str | None) -> float:
+    """Parse a ``Retry-After`` header value into a clamped seconds float.
+
+    Spec accepts either a delta-seconds integer or an HTTP-date. The augur
+    server always emits the integer form, so we parse as a float and fall
+    back to a small constant on anything else (HTTP-date, missing, garbage).
+    """
+    if value is None:
+        return _RETRY_AFTER_DEFAULT_SECONDS
+    try:
+        secs = float(value.strip())
+    except (AttributeError, ValueError):
+        return _RETRY_AFTER_DEFAULT_SECONDS
+    return max(0.0, min(secs, _RETRY_AFTER_MAX_SECONDS))
 
 
 @dataclass
@@ -257,10 +279,31 @@ class StreamingSink:
         except Exception as exc:  # noqa: BLE001
             logger.debug("augur streaming sink error: %s", exc)
 
+    def _request_with_retry(self, method: str, url: str, **kwargs: Any) -> Any:
+        """Issue an HTTP request, honouring a single ``Retry-After`` on 429.
+
+        The augur server returns 429 when its ingest queue is saturated
+        (server-side backpressure contract from augur#114). We sleep for
+        the header's seconds value and reissue exactly once — the server's
+        ingest endpoints are idempotent on ``(run_id, step_index)`` / the
+        trace manifest / heartbeats, so a single retry never double-writes.
+        If the second attempt also 429s, emit a WARNING and return the
+        response; the producer's local bundle remains authoritative.
+        """
+        resp = self._http.request(method, url, **kwargs)
+        if resp.status != 429:
+            return resp
+        delay = _parse_retry_after(resp.headers.get("Retry-After"))
+        time.sleep(delay)
+        resp = self._http.request(method, url, **kwargs)
+        if resp.status == 429:
+            logger.warning("augur ingest dropped after retry: %s %s", method, url)
+        return resp
+
     def _post_json(self, path: str, payload: Any, *, method: str = "POST") -> None:
         url = self.dsn.base_url + path
         body = json.dumps(payload).encode("utf-8")
-        resp = self._http.request(
+        resp = self._request_with_retry(
             method,
             url,
             body=body,
@@ -275,7 +318,7 @@ class StreamingSink:
     def _post_modelio_request(self, path: str, payload: dict[str, Any]) -> None:
         url = self.dsn.base_url + path
         body = json.dumps(payload).encode("utf-8")
-        resp = self._http.request(
+        resp = self._request_with_retry(
             "POST",
             url,
             body=body,
@@ -300,7 +343,7 @@ class StreamingSink:
     def _post_multipart(self, path: str, payload: bytes) -> None:
         url = self.dsn.base_url + path
         # urllib3 multipart: pass (filename, bytes, content_type)
-        resp = self._http.request(
+        resp = self._request_with_retry(
             "POST",
             url,
             fields={"image": ("shot.png", payload, "image/png")},
@@ -329,7 +372,7 @@ class StreamingSink:
         if last_event:
             payload["last_event"] = last_event
         body = json.dumps(payload).encode("utf-8")
-        resp = self._http.request(
+        resp = self._request_with_retry(
             "POST",
             url,
             body=body,
