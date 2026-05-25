@@ -1,6 +1,6 @@
 [project]
 name = "augur-sdk"
-version = "0.3.1"
+version = "0.4.0"
 description = "Augur SDK — instrument any screenshot-grounded computer-use agent (CUA). Sentry-style DSN streaming + local bundle writer."
 readme = "README.md"
 requires-python = ">=3.11"

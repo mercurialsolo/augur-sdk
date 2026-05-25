@@ -79,6 +79,7 @@ nav:
       - Diagnostics: concepts/diagnostics.md
       - Failure-Class Taxonomy: concepts/failure-class-taxonomy.md
       - Trajectory Fingerprint: concepts/trajectory-fingerprint.md
+      - Fanout Grouping: concepts/fanout-grouping.md
   - Integrations:
       - Python: integrations/python.md
       - Playwright: integrations/playwright.md
