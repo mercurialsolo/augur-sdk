@@ -124,6 +124,42 @@ class SideEffect(TypedDict, total=False):
 MutatedAxis = Literal["model", "prompt", "action", "grounder", "tool_description"]
 
 
+# augur-sdk#41: session-level RL training metadata (augur-schema 0.4.0).
+
+
+class SuccessCondition(TypedDict, total=False):
+    kind: str
+    params: dict[str, Any]
+    description: str
+
+
+class Subgoal(TypedDict, total=False):
+    subgoal_id: str
+    description: str
+    parent_subgoal_id: str | None
+    weight: float
+
+
+class TaskSpec(TypedDict, total=False):
+    task_spec_id: str
+    instruction: str
+    task_class: str
+    max_steps: int | None
+    max_duration_s: int | None
+    prohibited_actions: list[str]
+    success_conditions: list[SuccessCondition]
+    reset_state_id: str | None
+    task_seed: int | None
+    env_id: str | None
+    subgoals: list[Subgoal]
+
+
+class SubgoalCompletion(TypedDict, total=False):
+    subgoal_id: str
+    completion: float
+    first_completed_at_step: int | None
+
+
 class BranchContext(TypedDict, total=False):
     parent_run_id: str
     branch_point_step_index: int
@@ -182,6 +218,11 @@ class Verdict(TypedDict, total=False):
     status: VerdictStatus
     reason: str
     evidence_refs: list[str]
+    score: float
+    score_components: dict[str, float]
+    comparator: Literal["verifier", "model-judge", "exact-match", "human"]
+    should_stop: bool
+    uncertainty: float
 
 
 ReasoningFormat = Literal[
@@ -243,6 +284,10 @@ class StepTrace(TypedDict, total=False):
     judge_decisions: list[JudgeDecision]
     verdict_source: str
     branch_context: BranchContext | None
+    # augur-sdk#41 (schema 0.4.0): RL training fields
+    subgoals_completed: list[SubgoalCompletion]
+    loop_detected: bool
+    group_id: str
 
 
 class DecisionEvent(TypedDict, total=False):
@@ -274,6 +319,9 @@ class DebugSession(TypedDict, total=False):
     live: LiveEndpoints | None
     tags: dict[str, str]
     branch_context: BranchContext | None
+    # augur-sdk#41 (schema 0.4.0): RL training metadata
+    task_spec: TaskSpec | None
+    task_spec_id: str | None
 
 
 class ReplayExpected(TypedDict, total=False):

@@ -1,6 +1,6 @@
 [project]
 name = "augur-sdk"
-version = "0.5.0"
+version = "0.6.0"
 description = "Augur SDK — instrument any screenshot-grounded computer-use agent (CUA). Sentry-style DSN streaming + local bundle writer."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,7 +31,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "augur-schema>=0.3.3,<0.4",
+    "augur-schema>=0.4.1,<0.5",
     "jsonschema>=4.22",
     "referencing>=0.35",
     "urllib3>=2",
