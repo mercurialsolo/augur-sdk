@@ -38,6 +38,7 @@ Admin users can additionally set an `augur_tenant_override` cookie via
 | `POST` | `/api/v1/runs`                                                  | full manifest JSON (idempotent on `run_id`)                |
 | `PUT`  | `/api/v1/runs/{run_id}/trace`                                   | full `trace.json` document                                  |
 | `PUT`  | `/api/v1/runs/{run_id}/steps/{step_index}`                      | one StepTrace record                                        |
+| `PUT`  | `/api/v1/runs/{run_id}/costs`                                   | run-level cumulative `debug_session.costs` sub-object; idempotent last-write-wins. Driven by `DebugSession.set_costs(...)` since 0.3.1 (#34) |
 | `POST` | `/api/v1/runs/{run_id}/events`                                  | `{ events: DecisionEvent[], step_index?: number }`         |
 | `POST` | `/api/v1/runs/{run_id}/screenshots/{step_index}/{kind}`         | multipart form: `image=@shot.png;type=image/png`            |
 | `POST` | `/api/v1/runs/{run_id}/modelio/{relpath}`                       | full modelio record JSON; `relpath` is the SDK-allocated `<step:04d>-<layer>-<seq>.json` (or `run-<layer>-<seq>.json`). `403` ⇒ tenant hasn't enabled modelio capture (SDK latches off for the session) |

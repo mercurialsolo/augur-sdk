@@ -658,8 +658,16 @@ class DebugSession:
         Repeated calls overwrite previously-set fields; unset fields
         are preserved across calls. Pass only the dimensions you
         measured.
+
+        When streaming is enabled (``dsn`` configured), the cumulative
+        ``_session_costs`` dict is PUT to ``/runs/{run_id}/costs``
+        immediately (#34) so the live runs-list COST column reflects
+        the producer's running total without waiting for ``close()``.
+        Server is idempotent last-write-wins; 429 backpressure is
+        absorbed by the shared retry helper.
         """
         self._require_open()
+        mutated = False
         for name, value in {
             "total_usd": total_usd,
             "model_usd": model_usd,
@@ -671,6 +679,9 @@ class DebugSession:
         }.items():
             if value is not None:
                 self._session_costs[name] = value
+                mutated = True
+        if mutated and self._stream is not None:
+            self._stream.put_session_costs(dict(self._session_costs))
 
     def set_step_costs(
         self,

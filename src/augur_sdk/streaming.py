@@ -149,6 +149,26 @@ class StreamingSink:
             return
         self._spawn(lambda: self._post_json(f"/runs/{run_id}/steps/{idx}", dict(step), method="PUT"))
 
+    def put_session_costs(self, costs: dict[str, int | float]) -> None:
+        """Stream the run-level cumulative cost rollup (#34).
+
+        Idempotent overwrite on ``(run_id,)`` — the server's
+        ``PUT /runs/{run_id}/costs`` endpoint (augur#136) accepts the
+        latest ``debug_session.costs`` sub-object as the cumulative
+        truth, last-write-wins. Goes through ``_request_with_retry``
+        so the 429+Retry-After contract from 0.2.2 (#27) just works.
+        Empty payloads are dropped — the server requires at least one
+        field per schema.
+        """
+        if not costs:
+            return
+        run_id = self._run_id or "unknown"
+        self._spawn(
+            lambda: self._post_json(
+                f"/runs/{run_id}/costs", dict(costs), method="PUT"
+            )
+        )
+
     def post_events(self, events: list[DecisionEvent], *, step_index: int | None) -> None:
         run_id = self._run_id or "unknown"
         body: dict[str, Any] = {"events": [dict(e) for e in events]}
