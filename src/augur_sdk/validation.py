@@ -86,22 +86,23 @@ def validate_bundle(bundle_dir: str | Path) -> list[ValidationIssue]:
                 _issues_from_validator(validator_for("trace"), trace, "trace.json")
             )
 
-    # per-step files
+    # per-step files. Walks both layouts: flat `steps/<NNNN>.json` for
+    # single-emission steps and nested `steps/<NNNN>/<short_id>.json`
+    # for canonical steps with iterations (augur-sdk#30).
     steps_dir = root / "steps"
     if steps_dir.exists():
         step_validator = validator_for("step_trace")
-        for step_file in sorted(steps_dir.glob("*.json")):
+        for step_file in sorted(steps_dir.rglob("*.json")):
+            rel = step_file.relative_to(root).as_posix()
             try:
                 step = _read_json(step_file)
             except json.JSONDecodeError as e:
                 issues.append(
-                    ValidationIssue(
-                        f"steps/{step_file.name}", f"invalid JSON: {e}", ""
-                    )
+                    ValidationIssue(rel, f"invalid JSON: {e}", "")
                 )
                 continue
             issues.extend(
-                _issues_from_validator(step_validator, step, f"steps/{step_file.name}")
+                _issues_from_validator(step_validator, step, rel)
             )
 
     # events JSONL
@@ -174,7 +175,8 @@ def validate_bundle(bundle_dir: str | Path) -> list[ValidationIssue]:
     # either exist on disk or be listed in manifest.missing.
     declared_missing = set(manifest.get("missing", []) or [])
     if steps_dir.exists():
-        for step_file in sorted(steps_dir.glob("*.json")):
+        for step_file in sorted(steps_dir.rglob("*.json")):
+            rel = step_file.relative_to(root).as_posix()
             try:
                 step = _read_json(step_file)
             except json.JSONDecodeError:
@@ -189,7 +191,7 @@ def validate_bundle(bundle_dir: str | Path) -> list[ValidationIssue]:
                     continue
                 issues.append(
                     ValidationIssue(
-                        f"steps/{step_file.name}",
+                        rel,
                         f"references {ref} which is neither on disk nor listed in manifest.missing",
                         key,
                     )

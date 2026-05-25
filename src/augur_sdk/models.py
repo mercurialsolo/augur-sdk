@@ -221,6 +221,7 @@ class RecoveryDecision(TypedDict, total=False):
 class StepTrace(TypedDict, total=False):
     step_id: str
     step_index: int
+    step_iterations: int
     intent: str
     step_type: str
     required: bool

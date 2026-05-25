@@ -286,6 +286,83 @@ here. This file is SDK-only.
 
 ---
 
+## I. Step semantics & iteration accounting
+
+The SDK currently records one `StepTrace` per canonical step and collapses
+any re-emission with the same `step_index`. Producers (Mantis especially)
+think in *iterations* — brain-loop turns inside a single canonical step —
+and want to surface that cardinality without leaking decision-event
+internals to every consumer. These two issues unlock that.
+
+### I1. `step_iterations` field on `StepTrace`
+- **What:** Add an optional `step_iterations: int` field to `StepTrace`
+  (default treated as 1 when absent). Ship a producer-side helper
+  `Session.record_step_iteration(step_id_or_index, ...)` that appends an
+  iteration under an existing canonical step and bumps the counter.
+  `record_step()` keeps its existing single-emission semantics.
+- **Why:** Consumers (Augur viewer runs-list, OTel export, CSV dumps)
+  want to show *"7 (175)"* — 7 canonical steps with 175 iterations
+  underneath — without crawling decision events. Today the steps
+  column collapses to canonical count and loses the *"the model
+  thrashed for 30 turns inside step 3"* signal that triagers care
+  about. Producer-owned semantics is the right surface: only the
+  producer knows what a "turn" means for its agent loop.
+- **Done when:**
+  - `StepTrace` TypedDict carries optional `step_iterations: int`.
+  - JSON Schema in `schemas/step-trace.json` (or equivalent) updated
+    + schema version bumped.
+  - `Session.record_step_iteration()` exists, takes a step_id or
+    step_index + an iteration payload, increments
+    `step_iterations` atomically on the canonical step.
+  - Round-trip test: emit 1 canonical step + 5 iterations, close
+    bundle, reload — `step_iterations == 6`, all 6 iteration
+    payloads addressable.
+  - `record_step()` for a step_index that already exists emits a
+    `DeprecationWarning` pointing at `record_step_iteration`.
+  - `CHANGELOG.md` + `SPEC.md` note the schema bump and the new API.
+- **Touches:** `src/augur_sdk/models.py`, `src/augur_sdk/recorder.py`,
+  `src/augur_sdk/session.py`, `src/augur_sdk/bundle.py`,
+  `tests/test_recorder.py`, `tests/test_bundle_roundtrip.py`,
+  `CHANGELOG.md`, `SPEC.md`, `schemas/*.json`.
+- **Depends on:** I2 (otherwise iterations collapse into one
+  storage record and the counter is the only signal that survives).
+
+### I2. Key recorder + bundle writer by `step_id`, not `step_index`
+- **What:** Make `Recorder._steps` and `bundle._step_path()` key by
+  `step_id` instead of `step_index`. Today both collapse multiple
+  emissions sharing a `step_index` into a single in-memory slot and
+  single on-disk file (`steps/0007.json`), silently overwriting
+  earlier iterations. The producer-side fix in `mantis-cua#660`
+  already makes `step_id` unique per emission — the SDK just
+  ignores it.
+- **Why:** Without this, I1's `step_iterations` counter is the
+  *only* surviving artifact of every iteration past the first; the
+  per-iteration payloads, decision events, and screenshots are
+  lost to overwrite. #660's behavior change is currently a no-op
+  end-to-end because the storage layer collapses what the producer
+  carefully kept distinct.
+- **Done when:**
+  - `Recorder._steps` keyed by `step_id` (step_index still
+    derivable for ordering / first-failed lookup).
+  - `bundle._step_path()` produces a non-colliding path —
+    `steps/<NNNN>/<short_id>.json` (per-iteration sub-files under a
+    canonical-step dir) is preferred because it preserves the
+    "scan steps/ to count canonical steps" invariant that the
+    Augur server's live aggregator relies on
+    (`store.py:849-856`).
+  - Two `record_step()` calls with same step_index, different
+    step_id → two on-disk files, both addressable on reload.
+  - Existing single-emission bundles round-trip byte-identical.
+  - Augur server (downstream consumer) verified to read both old
+    and new layouts without code change.
+- **Touches:** `src/augur_sdk/recorder.py`, `src/augur_sdk/bundle.py`,
+  `src/augur_sdk/session.py`, `tests/test_recorder.py`,
+  `tests/test_bundle_roundtrip.py`, `SPEC.md` (§4 layout).
+- **Depends on:** none. Ship before I1 so I1's iteration payloads
+  actually persist.
+
+---
+
 ## H. Future / 1.0 blockers
 
 These are bigger and need design first. Open as RFCs in the upstream

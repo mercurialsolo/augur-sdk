@@ -38,7 +38,19 @@ from augur_sdk.storage import Store
 
 
 def _step_path(step_index: int) -> str:
+    """Path for a step with no iterations (flat layout). Preserves the
+    pre-0.3.0 layout for byte-identical round-trip of single-emission
+    bundles."""
     return f"steps/{step_index:04d}.json"
+
+
+def _iteration_step_path(step_index: int, step_id: str) -> str:
+    """Path for an iteration under a canonical step. Used when 2+
+    StepTraces share a ``step_index`` (augur-sdk#30). The 8-char
+    sha256 prefix of ``step_id`` keeps filenames bounded and
+    filesystem-safe while staying deterministic."""
+    short = hashlib.sha256(step_id.encode("utf-8")).hexdigest()[:8]
+    return f"steps/{step_index:04d}/{short}.json"
 
 
 def _screenshot_path(step_index: int, kind: str) -> str:
@@ -99,6 +111,16 @@ def write_bundle(
     events_grouped = recorder.all_events_grouped()
 
     steps = [policy.apply(s) for s in steps_raw]
+    # Collect iteration payloads per canonical step_index (augur-sdk#30).
+    # When iteration_count == 1 we fall through to the flat
+    # `steps/<NNNN>.json` write below for byte-identical back-compat.
+    iterations_by_index: dict[int, list[StepTrace]] = {}
+    for canonical in steps:
+        sidx = canonical["step_index"]
+        if recorder.iteration_count(sidx) > 1:
+            iterations_by_index[sidx] = [
+                policy.apply(it) for it in recorder.iterations_for(sidx)
+            ]
     redacted_events_grouped: dict[int | None, list[DecisionEvent]] = {
         k: [policy.apply(e) for e in v] for k, v in events_grouped.items()
     }
@@ -123,14 +145,33 @@ def write_bundle(
         if include_signatures:
             signatures[relpath] = _sha256(payload.encode("utf-8"))
 
-    # 2. per-step JSON
+    # 2. per-step JSON. Single-emission steps land flat at
+    # `steps/<NNNN>.json` (back-compat). Steps with iterations land at
+    # `steps/<NNNN>/<short_id>.json` for each iteration including the
+    # canonical (augur-sdk#30).
     for step in steps:
         idx = step["step_index"]
-        payload = _dumps(step)
-        with store.open_write_text(_step_path(idx)) as f:
-            f.write(payload)
-        if include_signatures:
-            signatures[_step_path(idx)] = _sha256(payload.encode("utf-8"))
+        iterations = iterations_by_index.get(idx)
+        if iterations is None:
+            payload = _dumps(step)
+            with store.open_write_text(_step_path(idx)) as f:
+                f.write(payload)
+            if include_signatures:
+                signatures[_step_path(idx)] = _sha256(payload.encode("utf-8"))
+            continue
+        for it in iterations:
+            sid = it.get("step_id")
+            if not isinstance(sid, str) or not sid:
+                raise ValueError(
+                    f"iteration at step_index={idx} missing step_id; "
+                    "cannot derive per-iteration bundle path"
+                )
+            relpath = _iteration_step_path(idx, sid)
+            payload = _dumps(it)
+            with store.open_write_text(relpath) as f:
+                f.write(payload)
+            if include_signatures:
+                signatures[relpath] = _sha256(payload.encode("utf-8"))
 
     # 3. events JSONL — one file per step, plus an unscoped file for run-level
     for step_index, evs in redacted_events_grouped.items():

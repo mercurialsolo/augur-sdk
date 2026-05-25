@@ -4,10 +4,14 @@ Accumulates StepTrace + DecisionEvent + Observation records in memory while
 a session is active. The bundle writer drains the recorder when the session
 closes.
 
-Recorder operations are intentionally append-only and idempotent on
-step_index: re-recording a step with the same index replaces the prior
-record (last-write-wins). This is the path adapters use when a step starts
-in `running` state and is later updated with the post-action result.
+Steps are keyed by ``step_id`` (since 0.3.0). Multiple steps may share the
+same ``step_index`` — that's how brain-loop iterations under a canonical step
+are addressed. The first ``step_id`` to land for a given ``step_index`` is the
+canonical step; subsequent emissions with new ``step_id``s are iterations and
+bump the canonical step's ``step_iterations`` counter (per
+``step_trace.schema.json`` and augur-sdk#31). Re-recording a step under its
+own ``step_id`` is still last-write-wins (the common ``running``→``succeeded``
+update path).
 """
 
 from __future__ import annotations
@@ -23,7 +27,11 @@ from augur_sdk.models import DecisionEvent, StepTrace
 class EventRecorder:
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._steps: dict[int, StepTrace] = {}
+        self._steps_by_id: dict[str, StepTrace] = {}
+        # step_id → StepTrace. Insertion order preserved.
+        self._step_ids_by_index: dict[int, list[str]] = {}
+        # step_index → ordered list of step_ids that share it.
+        # First entry is the canonical step; rest are iterations.
         self._events_by_step: dict[int | None, list[DecisionEvent]] = defaultdict(list)
         self._observation_bytes: dict[str, bytes] = {}
         # observation_bytes is keyed by bundle-relative path
@@ -44,19 +52,101 @@ class EventRecorder:
 
     # -- steps --
 
-    def record_step(self, step: StepTrace) -> None:
+    def _canonical_locked(self, step_index: int) -> StepTrace | None:
+        ids = self._step_ids_by_index.get(step_index)
+        if not ids:
+            return None
+        return self._steps_by_id.get(ids[0])
+
+    def record_step(self, step: StepTrace) -> bool:
+        """Record a step. Returns True iff this call appended a new
+        iteration under an existing canonical step (i.e. new ``step_id``
+        at an already-recorded ``step_index``) — the session layer uses
+        the return value to emit a ``DeprecationWarning`` per
+        augur-sdk#31. Returns False for the create or update path
+        (new ``step_index``, or update of an existing ``step_id``)."""
         if "step_index" not in step:
             raise ValueError("step is missing 'step_index'")
+        if "step_id" not in step:
+            raise ValueError("step is missing 'step_id'")
+        sid = step["step_id"]
+        sidx = step["step_index"]
+        payload: StepTrace = deepcopy(dict(step))  # type: ignore[assignment]
         with self._lock:
-            self._steps[step["step_index"]] = deepcopy(dict(step))  # type: ignore[assignment]
+            existing_ids = self._step_ids_by_index.setdefault(sidx, [])
+            is_new_iteration = False
+            if sid not in self._steps_by_id:
+                if existing_ids:
+                    is_new_iteration = True
+                existing_ids.append(sid)
+            self._steps_by_id[sid] = payload
+            if len(existing_ids) > 1:
+                canonical = self._steps_by_id[existing_ids[0]]
+                canonical["step_iterations"] = len(existing_ids)
+            return is_new_iteration
+
+    def record_step_iteration(
+        self, step_index: int, iteration: StepTrace
+    ) -> None:
+        """Append a brain-loop iteration under the canonical step at
+        ``step_index``. Bumps ``step_iterations`` on the canonical step.
+
+        Raises ``ValueError`` if no canonical step exists at
+        ``step_index`` (call ``record_step`` first) or if the iteration
+        carries the canonical step's ``step_id``."""
+        if "step_id" not in iteration:
+            raise ValueError("iteration is missing 'step_id'")
+        sid = iteration["step_id"]
+        payload: StepTrace = deepcopy(dict(iteration))  # type: ignore[assignment]
+        payload["step_index"] = step_index
+        with self._lock:
+            existing_ids = self._step_ids_by_index.get(step_index)
+            if not existing_ids:
+                raise ValueError(
+                    f"no canonical step at step_index={step_index}; "
+                    "call record_step() first before recording iterations"
+                )
+            canonical_id = existing_ids[0]
+            if sid == canonical_id:
+                raise ValueError(
+                    f"iteration step_id={sid!r} collides with the canonical "
+                    f"step's id; use a distinct step_id per iteration"
+                )
+            if sid not in self._steps_by_id:
+                existing_ids.append(sid)
+            self._steps_by_id[sid] = payload
+            canonical = self._steps_by_id[canonical_id]
+            canonical["step_iterations"] = len(existing_ids)
 
     def get_step(self, step_index: int) -> StepTrace | None:
+        """Return the canonical (first-recorded) step at ``step_index``."""
         with self._lock:
-            return deepcopy(self._steps.get(step_index))
+            step = self._canonical_locked(step_index)
+            return deepcopy(step) if step is not None else None
+
+    def get_step_by_id(self, step_id: str) -> StepTrace | None:
+        with self._lock:
+            return deepcopy(self._steps_by_id.get(step_id))
 
     def all_steps(self) -> list[StepTrace]:
+        """Canonical steps in step_index order. Iterations are not
+        included — they're addressable via ``iterations_for``."""
         with self._lock:
-            return [deepcopy(self._steps[i]) for i in sorted(self._steps)]
+            return [
+                deepcopy(self._steps_by_id[self._step_ids_by_index[i][0]])
+                for i in sorted(self._step_ids_by_index)
+            ]
+
+    def iterations_for(self, step_index: int) -> list[StepTrace]:
+        """All StepTraces sharing ``step_index`` in insertion order.
+        The canonical step is first; iterations follow."""
+        with self._lock:
+            ids = self._step_ids_by_index.get(step_index, [])
+            return [deepcopy(self._steps_by_id[sid]) for sid in ids]
+
+    def iteration_count(self, step_index: int) -> int:
+        with self._lock:
+            return len(self._step_ids_by_index.get(step_index, []))
 
     def patch_step_verdict(
         self,
@@ -73,7 +163,7 @@ class EventRecorder:
         external harness can add post-hoc verdicts to a step the
         producer left as unknown (#51)."""
         with self._lock:
-            step = self._steps.get(step_index)
+            step = self._canonical_locked(step_index)
             if step is None:
                 return False
             verdict: dict[str, Any] = {"status": status}
@@ -98,7 +188,7 @@ class EventRecorder:
         existing `reason`/`evidence_refs` are preserved. Used by
         DebugSession.set_score() (#59)."""
         with self._lock:
-            step = self._steps.get(step_index)
+            step = self._canonical_locked(step_index)
             if step is None:
                 return False
             verdict: dict[str, Any] = dict(step.get("verdict") or {"status": "unknown"})
@@ -200,7 +290,7 @@ class EventRecorder:
         DebugSession.set_step_versions() and the record_modelio
         auto-stamp path (#10)."""
         with self._lock:
-            step = self._steps.get(step_index)
+            step = self._canonical_locked(step_index)
             if step is None:
                 return False
             prior = step.get("captured_versions") or {}
@@ -227,7 +317,7 @@ class EventRecorder:
         ``step.verdict_source`` is set to ``verdict_source`` for
         provenance."""
         with self._lock:
-            step = self._steps.get(step_index)
+            step = self._canonical_locked(step_index)
             if step is None:
                 return False
             existing = step.get("judge_decisions") or []
@@ -250,7 +340,7 @@ class EventRecorder:
     ) -> bool:
         """Merge a partial env_fingerprint object into a step (#13)."""
         with self._lock:
-            step = self._steps.get(step_index)
+            step = self._canonical_locked(step_index)
             if step is None:
                 return False
             prior = step.get("env_fingerprint") or {}
@@ -272,7 +362,7 @@ class EventRecorder:
         Existing keys are overwritten by the patch; absent keys are
         preserved. Used by DebugSession.set_step_costs() (#58)."""
         with self._lock:
-            step = self._steps.get(step_index)
+            step = self._canonical_locked(step_index)
             if step is None:
                 return False
             prior = step.get("costs") or {}
@@ -354,7 +444,10 @@ class EventRecorder:
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
             return {
-                "steps": [deepcopy(self._steps[i]) for i in sorted(self._steps)],
+                "steps": [
+                    deepcopy(self._steps_by_id[self._step_ids_by_index[i][0]])
+                    for i in sorted(self._step_ids_by_index)
+                ],
                 "events": {
                     k: [deepcopy(e) for e in v] for k, v in self._events_by_step.items()
                 },
