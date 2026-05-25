@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://mercurialsolo.github.io/augur-sdk/dev/concepts/capture-modes/">
+        <link rel="canonical" href="https://mercurialsolo.github.io/augur-sdk/dev/concepts/fanout-grouping/">
       
       
-        <link rel="prev" href="../dsn/">
+        <link rel="prev" href="../trajectory-fingerprint/">
       
       
-        <link rel="next" href="../bundle-layout/">
+        <link rel="next" href="../../integrations/python/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Capture Modes - Augur SDK</title>
+        <title>Fanout Grouping - Augur SDK</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#capture-modes" class="md-skip">
+        <a href="#fanout-grouping" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Capture Modes
+              Fanout Grouping
             
           </span>
         </div>
@@ -444,37 +444,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Capture Modes
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../capture-modes/" class="md-nav__link">
         
   
   
@@ -490,81 +463,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The modes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-to-set-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where to set it
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mid-run-upgrade-since-013" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mid-run upgrade (since 0.1.3)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#recommended-deployments" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recommended deployments
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#capture-mode-does-not-control-redaction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Capture mode does NOT control redaction
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -714,10 +612,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../fanout-grouping/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fanout Grouping
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -733,6 +658,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#producer-side-orchestrator-session-helper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Producer side — orchestrator session helper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#producer-side-children" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Producer side — children
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#viewer-side-synthetic-parent-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewer side — synthetic parent fallback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-which" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use which
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1132,10 +1143,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-modes" class="md-nav__link">
+  <a href="#the-contract" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The modes
+        The contract
       
     </span>
   </a>
@@ -1143,10 +1154,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-to-set-it" class="md-nav__link">
+  <a href="#producer-side-orchestrator-session-helper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where to set it
+        Producer side — orchestrator session helper
       
     </span>
   </a>
@@ -1154,10 +1165,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mid-run-upgrade-since-013" class="md-nav__link">
+  <a href="#producer-side-children" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mid-run upgrade (since 0.1.3)
+        Producer side — children
       
     </span>
   </a>
@@ -1165,10 +1176,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recommended-deployments" class="md-nav__link">
+  <a href="#viewer-side-synthetic-parent-fallback" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recommended deployments
+        Viewer side — synthetic parent fallback
       
     </span>
   </a>
@@ -1176,10 +1187,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#capture-mode-does-not-control-redaction" class="md-nav__link">
+  <a href="#when-to-use-which" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Capture mode does NOT control redaction
+        When to use which
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
       
     </span>
   </a>
@@ -1203,7 +1225,7 @@
 
 
   
-    <a href="https://github.com/mercurialsolo/augur-sdk/edit/main/docs/concepts/capture-modes.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/mercurialsolo/augur-sdk/edit/main/docs/concepts/fanout-grouping.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1211,120 +1233,134 @@
   
 
 
-<h1 id="capture-modes">Capture modes<a class="headerlink" href="#capture-modes" title="Permanent link">&para;</a></h1>
-<p>Capture mode is the cost/coverage dial. Pick a low setting for always-on
-fleet observability; promote individual runs to a higher setting when
-you need to debug.</p>
-<h2 id="the-modes">The modes<a class="headerlink" href="#the-modes" title="Permanent link">&para;</a></h2>
+<h1 id="fanout-grouping">Fanout grouping<a class="headerlink" href="#fanout-grouping" title="Permanent link">&para;</a></h1>
+<p>When a producer fans out work across multiple sessions — Phase-1 collectors,
+Phase-2 workers, sub-agent siblings — the viewer should render those
+sessions <strong>grouped under a parent row</strong>, not as flat siblings in the
+runs-list. This page pins the contract producers and viewers hold each
+other to so the grouping is unambiguous.</p>
+<h2 id="the-contract">The contract<a class="headerlink" href="#the-contract" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>When a producer emits multiple <code>DebugSession</code> payloads (each with its
+own <code>run_id</code>) that share the same <code>branch_context.parent_run_id</code>,
+those sessions are <strong>siblings of one logical orchestrator</strong>. Viewers
+SHOULD group them under a parent row in any runs-list rendering —
+using either an explicit parent session at <code>parent_run_id</code> (when one
+exists) or a synthetic parent aggregated from the children otherwise.</p>
+</blockquote>
+<p>The contract covers both the <strong>replay-branch</strong> case (siblings produced
+by <a href="../../reference/api/#debugsessionbranch_from"><code>branch_from(...)</code></a>
+with different <code>mutated_axis</code> mutations on the same parent) and the
+<strong>fanout</strong> case (independent worker sessions spawned by an
+orchestrator). Both reach the platform through the same shape — a
+<code>branch_context.parent_run_id</code> carried on each step — and both deserve
+the same grouping treatment.</p>
+<p>The load-bearing field is <code>branch_context.parent_run_id</code>. Other fields
+(<code>branch_point_step_index</code>, <code>mutated_axis</code>, <code>mutation</code>, <code>branch_id</code>)
+remain meaningful in the replay-branch case; for genuinely independent
+fanout siblings, producers typically pick <code>mutated_axis="action"</code> to
+satisfy the schema and use <code>branch_id</code> to disambiguate the sibling.</p>
+<h2 id="producer-side-orchestrator-session-helper">Producer side — orchestrator session helper<a class="headerlink" href="#producer-side-orchestrator-session-helper" title="Permanent link">&para;</a></h2>
+<p>For the fanout case where the producer <strong>has</strong> aggregate metadata worth
+attaching (phase counts, fanout strategy, total budget), open a
+parent-only session via
+<a href="../../reference/api/#debugsessionopen_orchestrator"><code>DebugSession.open_orchestrator(...)</code></a>.
+It carries the aggregate tags and costs but records no steps of its
+own:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">augur_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">DebugSession</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Open the parent row up front, before spawning workers.</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">with</span> <span class="n">DebugSession</span><span class="o">.</span><span class="n">open_orchestrator</span><span class="p">(</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">run_id</span><span class="o">=</span><span class="s2">&quot;fanout-20b9a4786aa3-4e136449&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">client_name</span><span class="o">=</span><span class="s2">&quot;myproducer&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;parent-bundle/&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">session_name</span><span class="o">=</span><span class="s2">&quot;boattrader-fanout (4 workers)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">tenant_id</span><span class="o">=</span><span class="s2">&quot;acme&quot;</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">tags</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="s2">&quot;phase1_workers&quot;</span><span class="p">:</span> <span class="s2">&quot;4&quot;</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="s2">&quot;phase2_workers&quot;</span><span class="p">:</span> <span class="s2">&quot;4&quot;</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="s2">&quot;fanout_pattern&quot;</span><span class="p">:</span> <span class="s2">&quot;phase1_collect_phase2_extract&quot;</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="p">},</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">)</span> <span class="k">as</span> <span class="n">parent</span><span class="p">:</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="c1"># Spawn N child sessions; each carries branch_context.parent_run_id</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="c1"># pointing at this orchestrator&#39;s run_id.</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">children</span> <span class="o">=</span> <span class="n">spawn_workers</span><span class="p">(</span><span class="n">parent_run_id</span><span class="o">=</span><span class="n">parent</span><span class="o">.</span><span class="n">run_id</span><span class="p">)</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="o">...</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="c1"># Roll the children&#39;s costs up onto the parent — surfaces in the</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="c1"># viewer&#39;s runs-list COST column on the parent row.</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="n">parent</span><span class="o">.</span><span class="n">set_costs</span><span class="p">(</span><span class="n">total_usd</span><span class="o">=</span><span class="nb">sum</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">cost</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">children</span><span class="p">))</span>
+</span></code></pre></div>
+<p>The session is marked internally with the
+<code>augur.session_type=orchestrator</code> tag (exported as
+<code>augur_sdk.ORCHESTRATOR_TAG_KEY</code> / <code>_VALUE</code>) so the server / viewer can
+render it differently — aggregate stats only, no step list.
+<code>record_step</code>, <code>record_step_iteration</code>, and <code>attach_observation</code> all
+raise <code>RuntimeError</code> to make the contract explicit at the SDK boundary;
+<code>set_costs</code>, <code>add_tag</code>, <code>set_live_endpoints</code>, <code>finalize_outcome</code> and the
+other session-level helpers work normally.</p>
+<h2 id="producer-side-children">Producer side — children<a class="headerlink" href="#producer-side-children" title="Permanent link">&para;</a></h2>
+<p>Each child session points at the orchestrator via <code>branch_context</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">with</span> <span class="n">DebugSession</span><span class="p">(</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">run_id</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parent</span><span class="o">.</span><span class="n">run_id</span><span class="si">}</span><span class="s2">:phase2_w</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">client_name</span><span class="o">=</span><span class="s2">&quot;myproducer&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">out_dir</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;child-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">-bundle/&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">branch_context</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="s2">&quot;parent_run_id&quot;</span><span class="p">:</span> <span class="n">parent</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="s2">&quot;branch_point_step_index&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>  <span class="c1"># fanout siblings diverge at the start</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">&quot;mutated_axis&quot;</span><span class="p">:</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span>       <span class="c1"># closest match for independent work</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">&quot;branch_id&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parent</span><span class="o">.</span><span class="n">run_id</span><span class="si">}</span><span class="s2">:phase2_w</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="p">},</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">)</span> <span class="k">as</span> <span class="n">child</span><span class="p">:</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">child</span><span class="o">.</span><span class="n">record_step</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A lightweight slice (without the <code>mutation</code> payload) propagates to every
+step automatically, so the server can group by <code>parent_run_id</code> without
+joining steps back to the session record.</p>
+<h2 id="viewer-side-synthetic-parent-fallback">Viewer side — synthetic parent fallback<a class="headerlink" href="#viewer-side-synthetic-parent-fallback" title="Permanent link">&para;</a></h2>
+<p>If the producer doesn't use <code>open_orchestrator(...)</code>, the server is
+expected to <strong>synthesize a parent row</strong> from the children's shared
+<code>branch_context.parent_run_id</code>. The orchestrator helper is purely the
+producer-side ergonomic for attaching aggregate metadata the server
+can't derive from the children alone (phase counts, fanout strategy,
+total budget).</p>
+<p>Either way — explicit parent or synthetic — the runs-list shows one
+parent row with N child rows underneath. Consumers and producers
+contract on the <code>branch_context.parent_run_id</code> link; the orchestrator
+helper just makes the aggregate-metadata case ergonomic.</p>
+<h2 id="when-to-use-which">When to use which<a class="headerlink" href="#when-to-use-which" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Mode</th>
-<th>What it captures</th>
-<th>Bytes per step</th>
-<th>Cost</th>
+<th>Scenario</th>
+<th>Open an orchestrator session?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>off</code></td>
-<td>Manifest envelope only</td>
-<td>0</td>
-<td>none</td>
+<td>Fanout with no aggregate metadata (children carry everything)</td>
+<td>No — let the viewer synthesize the parent row.</td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
-<td>+ run/step ids, status, action type, failure class</td>
-<td>~0.5 KB</td>
-<td>tiny</td>
+<td>Fanout with aggregate tags / costs / phase counts</td>
+<td>Yes — <code>open_orchestrator(...)</code>.</td>
 </tr>
 <tr>
-<td><code>trace</code></td>
-<td>+ decisions, verifier output, recovery, grounding summary</td>
-<td>~3 KB</td>
-<td>low</td>
-</tr>
-<tr>
-<td><code>screenshots</code></td>
-<td>+ pre/post PNGs + coordinate overlays</td>
-<td>~800 KB</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>video</code></td>
-<td>+ video / MJPEG references</td>
-<td>reference only</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>model_io</code></td>
-<td>+ prompts, model responses, redacted secrets</td>
-<td>~30 KB</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>dispatch</code></td>
-<td>+ input dispatch details, retries, post-action state checks</td>
-<td>~5 KB</td>
-<td>low</td>
-</tr>
-<tr>
-<td><code>replay</code></td>
-<td>+ observation/task/context state for replay fixtures</td>
-<td>~50 KB</td>
-<td>med</td>
-</tr>
-<tr>
-<td><code>full</code></td>
-<td>All above, subject to redaction + retention</td>
-<td>~1 MB</td>
-<td>high</td>
+<td>Replay branches via <code>branch_from(...)</code></td>
+<td>No — the parent run already exists as a real session.</td>
 </tr>
 </tbody>
 </table>
-<p>Modes are <strong>ordered</strong> in code (<code>CaptureMode.SCREENSHOTS &gt; CaptureMode.TRACE</code>),
-so adapters that want to check "is screenshot capture active?" can:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">capture_mode</span> <span class="o">&gt;=</span> <span class="n">CaptureMode</span><span class="o">.</span><span class="n">SCREENSHOTS</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">take_pre_screenshot</span><span class="p">()</span>
-</span></code></pre></div>
-<h2 id="where-to-set-it">Where to set it<a class="headerlink" href="#where-to-set-it" title="Permanent link">&para;</a></h2>
-<p>In order of precedence:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># 1. Explicit argument — wins</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">DebugSession</span><span class="p">(</span><span class="n">capture_mode</span><span class="o">=</span><span class="n">CaptureMode</span><span class="o">.</span><span class="n">FULL</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># 2. AUGUR_CAPTURE_MODE env var — covers an entire fleet</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># export AUGUR_CAPTURE_MODE=screenshots</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># 3. Default — off</span>
-</span></code></pre></div>
-<h2 id="mid-run-upgrade-since-013">Mid-run upgrade (since 0.1.3)<a class="headerlink" href="#mid-run-upgrade-since-013" title="Permanent link">&para;</a></h2>
-<p>A run can start cheap and upgrade itself. <code>session.set_capture_mode(...)</code>
-stamps an explicit <code>capture_mode</code> field on every subsequent
-<code>record_step</code>, per the optional <code>capture_mode</code> field on
-<code>step_trace.schema.json</code>. The manifest's mode is unchanged; consumers
-see the override on the steps that carry it and inherit the manifest
-mode on the rest.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">with</span> <span class="n">DebugSession</span><span class="p">(</span><span class="n">capture_mode</span><span class="o">=</span><span class="n">CaptureMode</span><span class="o">.</span><span class="n">METADATA</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">():</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">session</span><span class="o">.</span><span class="n">record_step</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">verifier_failed</span><span class="p">:</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>            <span class="c1"># Upgrade so the next steps capture screenshots too.</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>            <span class="n">session</span><span class="o">.</span><span class="n">set_capture_mode</span><span class="p">(</span><span class="s2">&quot;screenshots&quot;</span><span class="p">)</span>
-</span></code></pre></div>
-<p>If the caller has already set <code>capture_mode</code> on the StepTrace dict, the
-override does not clobber it.</p>
-<h2 id="recommended-deployments">Recommended deployments<a class="headerlink" href="#recommended-deployments" title="Permanent link">&para;</a></h2>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Always-on fleet observability</strong>: <code>metadata</code> or <code>trace</code>. Free disk + bandwidth.</li>
-<li><strong>Staging / canary</strong>: <code>screenshots</code>. Useful overlays for grounding bugs.</li>
-<li><strong>Active debugging</strong>: <code>full</code>. Tag the run, rotate retention after a week.</li>
-<li><strong>Sensitive workflows</strong> (PCI, PII): set redaction + drop to <code>metadata</code>
-  unless the operator explicitly opts in.</li>
+<li><a href="../../reference/api/#debugsessionopen_orchestrator"><code>DebugSession.open_orchestrator(...)</code> API
+  reference</a></li>
+<li><a href="../../reference/api/#debugsessionbranch_from"><code>branch_from(...)</code> API reference</a>
+  — the replay-branch sibling case</li>
+<li><code>augur#138</code> — runs-list grouping by <code>branch_context.parent_run_id</code>
+  with synthetic parent rows (server side)</li>
 </ul>
-<h2 id="capture-mode-does-not-control-redaction">Capture mode does NOT control redaction<a class="headerlink" href="#capture-mode-does-not-control-redaction" title="Permanent link">&para;</a></h2>
-<p>A <code>full</code> capture is still redacted by the active <code>RedactionPolicy</code>. The
-mode controls <strong>what</strong> is captured; the policy controls <strong>how</strong> it is
-written. See <a href="../redaction/">redaction.md</a>.</p>
 
 
 

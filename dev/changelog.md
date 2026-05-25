@@ -6,6 +6,58 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-05-25
+
+### Fanout-orchestrator helper + grouping contract (closes #38)
+
+When a producer fans out work across N sibling sessions that share a
+`branch_context.parent_run_id`, the viewer's job is to group them
+under a single parent row — replay branches and fanout workers reach
+the platform through the same shape and deserve the same treatment.
+0.4.0 pins the contract and ships the producer-side ergonomic.
+
+- **`DebugSession.open_orchestrator(...)`** — new classmethod. Opens
+  a parent-only session that carries aggregate tags / costs /
+  metadata (phase counts, fanout strategy, total budget) but records
+  no steps of its own. `record_step`, `record_step_iteration`, and
+  `attach_observation` raise `RuntimeError` on these sessions —
+  record steps on the children. `set_costs`, `add_tag`,
+  `set_live_endpoints`, `finalize_outcome` and the rest of the
+  session-level helpers work normally.
+- **Session-shape marker via tags.** Orchestrator sessions land with
+  `tags["augur.session_type"] = "orchestrator"` (exported as
+  `augur_sdk.ORCHESTRATOR_TAG_KEY` / `_VALUE`) so the server can
+  render them as parent rows (aggregate stats, no step list). The
+  marker rides on `session.tags`, so no schema bump is needed —
+  every prior bundle continues to validate.
+- **`session.is_orchestrator`** — new property that's True for
+  sessions opened via `open_orchestrator(...)`, False otherwise.
+  Useful for callers asserting the mode after construction.
+- **Grouping contract pinned in docs.** New page at
+  [concepts/fanout-grouping.md](https://mercurialsolo.github.io/augur-sdk/concepts/fanout-grouping/)
+  spec'ing the rule: sessions sharing `branch_context.parent_run_id`
+  are siblings of one logical orchestrator; viewers SHOULD group them
+  under a parent row (explicit when the orchestrator session exists,
+  synthetic otherwise). Covers both the replay-branch and fanout-worker
+  cases.
+- **Convenience kwargs** — `session_name` and `tenant_id` on
+  `open_orchestrator(...)` land in `session.tags` under those keys.
+  Explicit `tags={...}` entries win, so callers that already use those
+  keys keep their values.
+
+Additive, no schema touch, no behaviour change for producers that
+don't call `open_orchestrator(...)`. Paired with the server-side
+runs-list grouping shipped in `mercurialsolo/augur#138`.
+
+### Tests
+
+- `tests/test_orchestrator_session.py` (10 tests) — tag stamping,
+  empty-step bundle validates, the three forbidden methods raise,
+  `set_costs` + `add_tag` round-trip, `session_name`/`tenant_id`
+  convenience, explicit-tags precedence, and a grouping-contract
+  end-to-end fixture (one parent + two children that share
+  `parent_run_id`). Full suite: 241 tests, all green.
+
 ## [0.3.1] — 2026-05-24
 
 ### `set_costs` now streams live (closes #34)
