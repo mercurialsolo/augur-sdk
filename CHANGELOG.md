@@ -6,6 +6,60 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-05-25
+
+### Per-token logprob capture in modelio.response (closes #40)
+
+Augur-captured bundles are already strong for behavior cloning, outcome
+/ process reward modeling, counterfactual off-policy learning, DPO, and
+verifier / judge training. The one paradigm they couldn't drive is
+**policy-gradient methods (PPO / GRPO and friends)** because those need
+behavior-policy probabilities for importance weighting. DPO /
+preference learning also benefits — without captured logprobs,
+consumers have to recompute them from the trajectory at training time,
+which is expensive and lossy.
+
+0.5.0 wires the SDK to populate the new `response.logprobs` field
+shipped in `augur-schema 0.3.3`.
+
+- **`DebugSession(capture_logprobs=True)`** — new producer-level
+  opt-in. **Off by default** because logprobs roughly double the
+  response payload size on OpenAI and add a small cost on some
+  providers. Adapters read `session.capture_logprobs` to decide
+  whether to pass `top_logprobs=N` on outbound model calls.
+- **Empty-vs-absent semantics in `record_modelio`.** When
+  `capture_logprobs=True` and the producer didn't stamp anything on
+  the response, the SDK defaults `response.logprobs = []` so
+  consumers can tell "requested but vendor returned nothing" (empty
+  array) from "not requested" (field absent / null). Producers that
+  DID receive logprobs put them on `response.logprobs` themselves
+  and the SDK passes them through verbatim.
+- **`ModelApiAdapterBase.extract_logprobs_from_response(response)`**
+  — new static helper. Maps OpenAI Chat Completions / Responses
+  (`choices[].logprobs.content[]`) and Anthropic Messages
+  (`content[].logprobs[]`) shapes to the canonical
+  `[{token, token_id, logprob, top_alternatives}]` list. Returns
+  `None` when the response has no recognisable logprob block. Same
+  pattern as `extract_reasoning_from_response` from 0.1.14.
+- **Context-aware redaction.** The default policy masks bare `token`
+  keys (intended for API/bearer tokens), but in a logprob entry
+  `token` is the decoded model output. The policy now skips the
+  mask when the parent dict carries a numeric `logprob` — preserving
+  the training signal while the generic rule still defends elsewhere.
+- **Schema dep bumped to `augur-schema>=0.3.3,<0.4`** to pick up the
+  new optional `response.logprobs` field. Bundles emitted by 0.4.x
+  against the old schema continue to validate — the field is
+  additive.
+
+### Tests
+
+- `tests/test_logprobs.py` (14 tests) — session opt-in flag, the
+  empty-vs-absent semantics in `record_modelio`, schema round-trip
+  for canonical entries, OpenAI / Anthropic vendor-mapping shapes,
+  edge cases (empty choices, `top_logprobs=0`, vendor-surfaced
+  `token_id`), and the redaction carve-out. Full suite: 255 tests,
+  all green.
+
 ## [0.4.0] — 2026-05-25
 
 ### Fanout-orchestrator helper + grouping contract (closes #38)

@@ -57,20 +57,20 @@ wheels = [
 
 [[package]]
 name = "augur-schema"
-version = "0.3.2"
+version = "0.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonschema" },
     { name = "referencing" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/95/4ac4e82d7e5879a65c9adfa9c0942bc280a6c91c8fff4641f6072ab0eb1c/augur_schema-0.3.2.tar.gz", hash = "sha256:2c95dd9d1e61ce61f49c7ce98c6c8a43f65d02ff527c20cadde6ceb4ccec8507", size = 24258, upload-time = "2026-05-25T00:48:14.317Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/c6/4e36c44c5d8b5b9ce9b47abef8c55b32856eef9706e8a928b13ff76ef7d7/augur_schema-0.3.3.tar.gz", hash = "sha256:363e3633339382d989b0bb9209d9432be1c3d0ff4e71d22c8f2762f83d08b3ff", size = 25583, upload-time = "2026-05-25T18:37:34.869Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/1f/1f7f4c966c18f7439c5b002f78a2533a5cd4ac64cad77f55f8d9a0bd1ef4/augur_schema-0.3.2-py3-none-any.whl", hash = "sha256:6cb04045bef5bd3cadafbc5bb27b54b47f3260a7237e1d0705623ee83c5ee270", size = 31504, upload-time = "2026-05-25T00:48:12.864Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/c3/746babe9cf2b81265d83ae9ac30233476847071eef0a918f44b3f4806192/augur_schema-0.3.3-py3-none-any.whl", hash = "sha256:ae269561f39e34d199843d3fe0bbe33af877e2f7a4de8ff80698018505c415a7", size = 32344, upload-time = "2026-05-25T18:37:33.806Z" },
 ]
 
 [[package]]
 name = "augur-sdk"
-version = "0.2.2"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "augur-schema" },
@@ -94,7 +94,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "augur-schema", specifier = ">=0.3.2,<0.4" },
+    { name = "augur-schema", specifier = ">=0.3.3,<0.4" },
     { name = "jsonschema", specifier = ">=4.22" },
     { name = "referencing", specifier = ">=0.35" },
     { name = "urllib3", specifier = ">=2" },
