@@ -15,6 +15,7 @@ Public surface:
 from __future__ import annotations
 
 import uuid
+import warnings
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
@@ -374,10 +375,98 @@ class DebugSession:
         # without joining back to the session.
         if self._branch_context is not None and "branch_context" not in step:
             step["branch_context"] = self._step_branch_context()  # type: ignore[typeddict-item]
-        self._recorder.record_step(step)
+        is_new_iteration = self._recorder.record_step(step)
+        if is_new_iteration:
+            # augur-sdk#31: per-iteration emission should go through
+            # record_step_iteration() so the canonical step's
+            # step_iterations counter and the per-iteration bundle path
+            # are managed together.
+            warnings.warn(
+                "record_step() with a new step_id at an existing "
+                "step_index is deprecated; use "
+                "DebugSession.record_step_iteration() to append "
+                "iterations under the canonical step.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if self._stream is not None:
             redacted = self.redaction_policy.apply(dict(step))
             self._stream.put_step(redacted)
+            if is_new_iteration:
+                # Mirror the canonical step (now carrying an updated
+                # step_iterations counter) so the live runs-list reflects
+                # the new iteration count without waiting for close().
+                canonical_idx = step.get("step_index")
+                if isinstance(canonical_idx, int):
+                    canonical = self._recorder.get_step(canonical_idx)
+                    if canonical is not None:
+                        self._stream.put_step(
+                            self.redaction_policy.apply(dict(canonical))
+                        )
+
+    def record_step_iteration(
+        self,
+        step_id_or_index: str | int,
+        iteration: StepTrace,
+    ) -> None:
+        """Append a brain-loop iteration under an existing canonical
+        step. Bumps ``step_iterations`` on the canonical step and
+        stages the iteration payload at
+        ``steps/<NNNN>/<short_id>.json`` on close (augur-sdk#31).
+
+        ``step_id_or_index`` resolves the canonical step: pass the
+        canonical's ``step_id`` for explicit linkage, or its
+        ``step_index`` when iterations always share the same canonical
+        slot (Mantis-style agent loops).
+
+        ``iteration`` is a ``StepTrace`` dict; it MUST carry a
+        ``step_id`` distinct from the canonical's. The SDK forces
+        ``step_index`` to match the resolved canonical step.
+
+        Raises ``ValueError`` if no canonical step exists at the
+        resolved index (call :py:meth:`record_step` first)."""
+        self._require_open()
+        if isinstance(step_id_or_index, int):
+            canonical_idx = step_id_or_index
+        else:
+            canonical = self._recorder.get_step_by_id(step_id_or_index)
+            if canonical is None:
+                raise ValueError(
+                    f"no canonical step with step_id={step_id_or_index!r}; "
+                    "call record_step() first before recording iterations"
+                )
+            canonical_idx_any = canonical.get("step_index")
+            if not isinstance(canonical_idx_any, int):
+                raise ValueError(
+                    f"canonical step {step_id_or_index!r} is missing step_index"
+                )
+            canonical_idx = canonical_idx_any
+        iter_payload: StepTrace = dict(iteration)  # type: ignore[assignment]
+        if (
+            self._capture_mode_override
+            and "capture_mode" not in iter_payload
+        ):
+            iter_payload["capture_mode"] = self._capture_mode_override  # type: ignore[typeddict-unknown-key]
+        if (
+            self._branch_context is not None
+            and "branch_context" not in iter_payload
+        ):
+            iter_payload["branch_context"] = self._step_branch_context()  # type: ignore[typeddict-item]
+        self._recorder.record_step_iteration(canonical_idx, iter_payload)
+        if self._stream is not None:
+            # Stream the iteration's StepTrace; the server's idempotency
+            # on (run_id, step_index) means consumers without
+            # iteration-aware aggregation see the latest, while
+            # iteration-aware consumers can read the bumped counter from
+            # the canonical re-emission below.
+            self._stream.put_step(
+                self.redaction_policy.apply(dict(iter_payload))
+            )
+            canonical = self._recorder.get_step(canonical_idx)
+            if canonical is not None:
+                self._stream.put_step(
+                    self.redaction_policy.apply(dict(canonical))
+                )
 
     def record_event(self, event: DecisionEvent) -> None:
         self._require_open()
