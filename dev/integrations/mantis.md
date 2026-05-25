@@ -136,6 +136,23 @@ def run_with_augur(runner) -> None:
                     "detail":     ev.detail,
                 })
 
+            # Mantis-style brain-loop iterations (since augur-sdk 0.3.0).
+            # If the same canonical step ran through multiple turns —
+            # critic → recovery → retry — surface each as an iteration so
+            # the runs-list shows "N (M)" instead of collapsing to N.
+            # See concepts/bundle-layout.md#step-iterations.
+            for turn_idx, turn in enumerate(step.iterations[1:], start=1):
+                augur.record_step_iteration(step.step_index, {
+                    "step_id":    f"{run_id}/step/{step.step_index:04d}/iter/{turn_idx}",
+                    "step_index": step.step_index,
+                    "step_type":  turn.action_type,
+                    "intent":     turn.intent,
+                    "status":     "succeeded" if turn.success else "failed",
+                    "started_at": _iso(turn.started_at),
+                    "action":     {"type": turn.action_type, "params": dict(turn.params or {})},
+                    "verdict":    {"status": "passed" if turn.success else "failed"},
+                })
+
         if runner.halted:
             augur.set_status("halted")
 

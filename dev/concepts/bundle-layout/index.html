@@ -588,6 +588,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#step-iterations-since-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step iterations (since 0.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#missing-artifacts-late-attach" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1179,6 +1190,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#step-iterations-since-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step iterations (since 0.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#missing-artifacts-late-attach" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1237,39 +1259,42 @@ viewer, CLI, and coding agents read bundles without configuration.</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  steps/
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    0000.json                        # one StepTrace per file (zero-padded index)
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    0001.json
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    ...
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  events/
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    0000.jsonl                       # decision events for step N (one event per line)
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    run.jsonl                        # run-level events (when present)
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  screenshots/
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    0000_pre.png
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    0000_post.png
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    ...
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  diagnostics/
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    findings.json                    # output of `augur diagnose` (when run)
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>  logs/
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    run.log                          # default destination for append_log(name=&quot;run&quot;)
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    runner.log                       # adapter-supplied logs (any logs/&lt;name&gt;.log)
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    step-0007.log                    # append_log(text, step_index=7) routes here
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>  schema/
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    manifest.schema.json             # canonical record schemas — vendored so an
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    step_trace.schema.json           #   offline agent can validate without a network
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    ...
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>  replay/
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>    0011_fixture.json                # replay fixtures (capture_mode=replay or full)
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    0011.prior.json                  # prior-step context for the fixture (since 0.1.9)
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>  modelio/
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    0000-planner-0.json              # one ModelIORecord per call (since 0.1.6)
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    0000-grounding-0.json             #   &lt;step:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    0011-verifier-0.json             # capture_mode=model_io or full
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>  preferences/
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    0011.json                        # DPO / RLHF preference record (since 0.1.6)
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>  side_effects/                      # irreversible-action ledger (since 0.1.14)
-</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>    0003-se_abc123.json              #   &lt;step:04d&gt;-&lt;side_effect_id&gt;.json
-</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>  eval_candidates.json               # mark_for_eval tags (since 0.1.14, when present)
-</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>  outcomes.json                      # finalize_outcome records (since 0.1.14, when present)
-</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>  events/
-</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>    reasoning.jsonl                  # record_reasoning records (since 0.1.14, when present)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    0003/                            # canonical step with brain-loop iterations (since 0.3.0)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>      a1b2c3d4.json                  #   one per iteration; &lt;short_id&gt; = sha256(step_id)[:8]
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>      e5f60718.json                  #   canonical step is here too — see §Step iterations
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    ...
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  events/
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    0000.jsonl                       # decision events for step N (one event per line)
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    run.jsonl                        # run-level events (when present)
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  screenshots/
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    0000_pre.png
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    0000_post.png
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    ...
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  diagnostics/
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    findings.json                    # output of `augur diagnose` (when run)
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>  logs/
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    run.log                          # default destination for append_log(name=&quot;run&quot;)
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    runner.log                       # adapter-supplied logs (any logs/&lt;name&gt;.log)
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    step-0007.log                    # append_log(text, step_index=7) routes here
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>  schema/
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    manifest.schema.json             # canonical record schemas — vendored so an
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>    step_trace.schema.json           #   offline agent can validate without a network
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    ...
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>  replay/
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    0011_fixture.json                # replay fixtures (capture_mode=replay or full)
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    0011.prior.json                  # prior-step context for the fixture (since 0.1.9)
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>  modelio/
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>    0000-planner-0.json              # one ModelIORecord per call (since 0.1.6)
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    0000-grounding-0.json             #   &lt;step:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>    0011-verifier-0.json             # capture_mode=model_io or full
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>  preferences/
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>    0011.json                        # DPO / RLHF preference record (since 0.1.6)
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>  side_effects/                      # irreversible-action ledger (since 0.1.14)
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>    0003-se_abc123.json              #   &lt;step:04d&gt;-&lt;side_effect_id&gt;.json
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>  eval_candidates.json               # mark_for_eval tags (since 0.1.14, when present)
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>  outcomes.json                      # finalize_outcome records (since 0.1.14, when present)
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>  events/
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>    reasoning.jsonl                  # record_reasoning records (since 0.1.14, when present)
 </span></code></pre></div>
 <h2 id="why-path-stable">Why path-stable<a class="headerlink" href="#why-path-stable" title="Permanent link">&para;</a></h2>
 <p>A coding agent should not have to <em>discover</em> anything. Once it sniffs
@@ -1328,6 +1353,29 @@ mid-write you never see a half-step JSON.</p>
 </span></code></pre></div>
 <p>Both fields are mandatory and stable; that's enough to discriminate from
 other tools' debug exports.</p>
+<h2 id="step-iterations-since-030">Step iterations (since 0.3.0)<a class="headerlink" href="#step-iterations-since-030" title="Permanent link">&para;</a></h2>
+<p>A canonical CUA step MAY carry brain-loop iterations underneath — a Mantis-style agent that "thrashes for 30 turns inside step 3" emits 30 iterations under one canonical step. Iterations share their canonical step's <code>step_index</code> but each carries a distinct <code>step_id</code>. The on-disk layout flexes accordingly:</p>
+<table>
+<thead>
+<tr>
+<th>Iterations at <code>step_index=N</code></th>
+<th>Layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code> (single emission)</td>
+<td><code>steps/&lt;NNNN&gt;.json</code> (flat, byte-identical pre-0.3.0)</td>
+</tr>
+<tr>
+<td><code>≥2</code></td>
+<td><code>steps/&lt;NNNN&gt;/&lt;short_id&gt;.json</code> for each iteration</td>
+</tr>
+</tbody>
+</table>
+<p><code>&lt;short_id&gt;</code> is the first 8 hex chars of <code>sha256(step_id)</code> — deterministic, filesystem-safe, and bounded.</p>
+<p>The canonical step (first emission) is always the entry whose <code>step_iterations</code> field reflects the total count. <code>trace.json["steps"]</code> lists one entry per canonical step. To count canonical steps from disk: scan <code>steps/</code> and count entries whose stem matches <code>&lt;NNNN&gt;</code> — file OR directory both count as one canonical step.</p>
+<p>Producers append iterations via <a href="../../reference/api/#record_step_iteration"><code>DebugSession.record_step_iteration(step_id_or_index, iteration)</code></a>. Calling <code>record_step()</code> with a new <code>step_id</code> at an existing <code>step_index</code> still works but emits a <code>DeprecationWarning</code> pointing at <code>record_step_iteration</code>.</p>
 <h2 id="missing-artifacts-late-attach">Missing artifacts (late attach)<a class="headerlink" href="#missing-artifacts-late-attach" title="Permanent link">&para;</a></h2>
 <p>If a step references <code>screenshots/0007_pre.png</code> but the file isn't on
 disk (e.g. the SDK was attached only after step 5), the producer lists
