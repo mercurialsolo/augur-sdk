@@ -269,7 +269,12 @@ internals to emit the new fields:
   MUST be merge-on-call (later kwargs win; unset dimensions are
   preserved). `set_costs` surfaces on **both** the session record
   and the manifest (`manifest.json#/costs`); `set_step_costs`
-  patches the step's `costs` object on disk.
+  patches the step's `costs` object on disk. Since 0.3.1, `set_costs`
+  with at least one dimension set ALSO streams the full cumulative
+  dict via `PUT /api/v1/runs/{run_id}/costs` so the live runs-list
+  COST column reflects the producer's running total without waiting
+  for `close()` (#34). Server is idempotent last-write-wins;
+  `set_costs()` with no kwargs MUST NOT fire a PUT.
 - `DebugSession.set_score(step_index, score, *, comparator,
   components)` MUST merge into the existing verdict (the
   categorical `status` is preserved); `score` MUST be clamped to

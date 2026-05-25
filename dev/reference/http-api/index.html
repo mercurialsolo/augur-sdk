@@ -1363,6 +1363,11 @@ All <code>GET /api/v1/runs[...]</code> and <code>GET /api/v1/connections</code> 
 <td>one StepTrace record</td>
 </tr>
 <tr>
+<td><code>PUT</code></td>
+<td><code>/api/v1/runs/{run_id}/costs</code></td>
+<td>run-level cumulative <code>debug_session.costs</code> sub-object; idempotent last-write-wins. Driven by <code>DebugSession.set_costs(...)</code> since 0.3.1 (#34)</td>
+</tr>
+<tr>
 <td><code>POST</code></td>
 <td><code>/api/v1/runs/{run_id}/events</code></td>
 <td><code>{ events: DecisionEvent[], step_index?: number }</code></td>

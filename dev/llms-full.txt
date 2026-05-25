@@ -2268,11 +2268,19 @@ class StreamingSink:
     def post_manifest(self, manifest: dict[str, Any]) -> None: ...
     def put_trace(self, trace: dict[str, Any]) -> None: ...
     def put_step(self, step: StepTrace) -> None: ...
+    def put_session_costs(self, costs: dict[str, int | float]) -> None: ...
     def post_events(self, events: list[DecisionEvent], *, step_index: int | None) -> None: ...
     def post_screenshot(self, step_index: int, kind: str, png_bytes: bytes) -> None: ...
     def post_modelio(self, relpath: str, record: dict[str, Any]) -> None: ...
     def post_logs(self, *, text: str, name: str = "run", step_index: int | None = None) -> None: ...
 ```
+
+`put_session_costs(costs)` is driven by `Session.set_costs(...)` since
+0.3.1. PUTs the cumulative `debug_session.costs` dict to
+`/api/v1/runs/<run_id>/costs` — server is idempotent last-write-wins,
+so each call carries the running total (not the delta). Honours the
+shared 429+`Retry-After` retry path. No PUT fires for `set_costs()`
+with no kwargs set.
 
 `post_modelio(relpath, record)` is driven by `Session.record_modelio()`
 — `relpath` is the bundle-relative path returned by the recorder
@@ -2349,6 +2357,7 @@ Admin users can additionally set an `augur_tenant_override` cookie via
 | `POST` | `/api/v1/runs`                                                  | full manifest JSON (idempotent on `run_id`)                |
 | `PUT`  | `/api/v1/runs/{run_id}/trace`                                   | full `trace.json` document                                  |
 | `PUT`  | `/api/v1/runs/{run_id}/steps/{step_index}`                      | one StepTrace record                                        |
+| `PUT`  | `/api/v1/runs/{run_id}/costs`                                   | run-level cumulative `debug_session.costs` sub-object; idempotent last-write-wins. Driven by `DebugSession.set_costs(...)` since 0.3.1 (#34) |
 | `POST` | `/api/v1/runs/{run_id}/events`                                  | `{ events: DecisionEvent[], step_index?: number }`         |
 | `POST` | `/api/v1/runs/{run_id}/screenshots/{step_index}/{kind}`         | multipart form: `image=@shot.png;type=image/png`            |
 | `POST` | `/api/v1/runs/{run_id}/modelio/{relpath}`                       | full modelio record JSON; `relpath` is the SDK-allocated `<step:04d>-<layer>-<seq>.json` (or `run-<layer>-<seq>.json`). `403` ⇒ tenant hasn't enabled modelio capture (SDK latches off for the session) |
@@ -2910,7 +2919,12 @@ internals to emit the new fields:
   MUST be merge-on-call (later kwargs win; unset dimensions are
   preserved). `set_costs` surfaces on **both** the session record
   and the manifest (`manifest.json#/costs`); `set_step_costs`
-  patches the step's `costs` object on disk.
+  patches the step's `costs` object on disk. Since 0.3.1, `set_costs`
+  with at least one dimension set ALSO streams the full cumulative
+  dict via `PUT /api/v1/runs/{run_id}/costs` so the live runs-list
+  COST column reflects the producer's running total without waiting
+  for `close()` (#34). Server is idempotent last-write-wins;
+  `set_costs()` with no kwargs MUST NOT fire a PUT.
 - `DebugSession.set_score(step_index, score, *, comparator,
   components)` MUST merge into the existing verdict (the
   categorical `status` is preserved); `score` MUST be clamped to
@@ -3052,6 +3066,49 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 `docs/versioning.md` upstream (`MAJOR.MINOR.PATCH`; pre-1.0 minors may break).
 
 ## [Unreleased]
+
+## [0.3.1] — 2026-05-24
+
+### `set_costs` now streams live (closes #34)
+
+`DebugSession.set_costs(...)` no longer waits for `close()` to surface the
+run-level cumulative cost. With a `dsn` configured, every call now PUTs
+the cumulative dict to `/api/v1/runs/{run_id}/costs` immediately so the
+Augur viewer's Runs-list COST column tracks the producer's running total
+in real time.
+
+Fixes the non-monotonic UI value caused by 0.3.0's per-iteration step
+PUTs overwriting a canonical step's `costs` field — sum-over-steps on
+the viewer was no longer monotonic. Cumulative cost is the right surface
+because the producer already maintains it (budget caps need it), cost
+is monotonic by construction, and cumulative emissions survive dropped
+events where deltas don't.
+
+Paired with the server-side endpoint shipped in `mercurialsolo/augur#137`.
+
+- **`StreamingSink.put_session_costs(costs)`** — new method. Routes
+  through the shared `_request_with_retry` helper from 0.2.2 (#27),
+  so the 429+`Retry-After` contract on the new endpoint is honoured
+  for free.
+- **`DebugSession.set_costs(...)`** — patches the in-memory dict as
+  before, then PUTs the cumulative if any dimension was set. No PUT
+  fires for `set_costs()` with no kwargs (defensive callers don't
+  spam the ingest queue).
+- **Server compatibility** — falls back to bundle-only behavior
+  against pre-#137 servers (the PUT returns 404, logged at DEBUG by
+  the existing `_post_json` error path; the local bundle still owns
+  `session.costs` on close).
+- **No schema change** — `debug_session.costs` already exists in
+  `augur-schema 0.3.2`; the PUT body is just that sub-object.
+
+### Tests
+
+- `tests/test_live_session_costs.py` (8 tests) — wire format on the
+  new route, empty-payload no-op, 429 retry, double-429 drop, the
+  cumulative-not-delta contract across multiple `set_costs` calls,
+  no-kwargs no-op, no-DSN local-only path, and a regression guard
+  that `close()` still writes `session.costs` to trace.json. Full
+  suite: 231 tests, all green.
 
 ## [0.3.0] — 2026-05-24
 
