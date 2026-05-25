@@ -14,6 +14,9 @@ viewer, CLI, and coding agents read bundles without configuration.
   steps/
     0000.json                        # one StepTrace per file (zero-padded index)
     0001.json
+    0003/                            # canonical step with brain-loop iterations (since 0.3.0)
+      a1b2c3d4.json                  #   one per iteration; <short_id> = sha256(step_id)[:8]
+      e5f60718.json                  #   canonical step is here too — see §Step iterations
     ...
   events/
     0000.jsonl                       # decision events for step N (one event per line)
@@ -83,6 +86,21 @@ Sniff `manifest.json` for:
 
 Both fields are mandatory and stable; that's enough to discriminate from
 other tools' debug exports.
+
+## Step iterations (since 0.3.0)
+
+A canonical CUA step MAY carry brain-loop iterations underneath — a Mantis-style agent that "thrashes for 30 turns inside step 3" emits 30 iterations under one canonical step. Iterations share their canonical step's `step_index` but each carries a distinct `step_id`. The on-disk layout flexes accordingly:
+
+| Iterations at `step_index=N` | Layout                                              |
+|------------------------------|-----------------------------------------------------|
+| `1` (single emission)        | `steps/<NNNN>.json` (flat, byte-identical pre-0.3.0)|
+| `≥2`                         | `steps/<NNNN>/<short_id>.json` for each iteration   |
+
+`<short_id>` is the first 8 hex chars of `sha256(step_id)` — deterministic, filesystem-safe, and bounded.
+
+The canonical step (first emission) is always the entry whose `step_iterations` field reflects the total count. `trace.json["steps"]` lists one entry per canonical step. To count canonical steps from disk: scan `steps/` and count entries whose stem matches `<NNNN>` — file OR directory both count as one canonical step.
+
+Producers append iterations via [`DebugSession.record_step_iteration(step_id_or_index, iteration)`](../reference/api.md#record_step_iteration). Calling `record_step()` with a new `step_id` at an existing `step_index` still works but emits a `DeprecationWarning` pointing at `record_step_iteration`.
 
 ## Missing artifacts (late attach)
 
