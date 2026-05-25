@@ -2171,8 +2171,17 @@ the chunk to <code>/api/v1/runs/&lt;run_id&gt;/logs</code>; the server routes it
 <code>logs/&lt;name&gt;.log</code> or <code>logs/step-&lt;idx&gt;.log</code>.</p>
 <h2 id="version">Version<a class="headerlink" href="#version" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">augur_sdk</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">augur_sdk</span><span class="o">.</span><span class="n">__version__</span>               <span class="c1"># &quot;0.1.0&quot;</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">augur_sdk</span><span class="o">.</span><span class="n">SUPPORTED_SCHEMA_RANGE</span>    <span class="c1"># (&quot;0.1&quot;, &quot;0.1&quot;)</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">augur_sdk</span><span class="o">.</span><span class="n">__version__</span>               <span class="c1"># e.g. &quot;0.3.0&quot; — SDK release version</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Range of JSON Schema CONTENT versions this SDK can produce + read</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># (the `$id` segment, not the `augur-schema` package version).</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># Additive field updates in `augur-schema` (e.g. `step_iterations`</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># in 0.3.2) do NOT bump this — they slot into the same content</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># version. See SPEC §5.</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="n">augur_sdk</span><span class="o">.</span><span class="n">SUPPORTED_SCHEMA_RANGE</span>    <span class="c1"># (&quot;0.1&quot;, &quot;0.1&quot;)</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="kn">from</span><span class="w"> </span><span class="nn">augur_schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">SCHEMA_VERSION</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="n">SCHEMA_VERSION</span>                       <span class="c1"># authoritative content version</span>
 </span></code></pre></div>
 
 

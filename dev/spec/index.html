@@ -2023,8 +2023,15 @@ that share their canonical's <code>step_index</code> but carry distinct
   note in <code>CHANGELOG.md</code>.</li>
 <li>Post-1.0: minors are strictly additive; only majors break.</li>
 <li><code>__version__</code> and <code>SUPPORTED_SCHEMA_RANGE</code> are introspectable at runtime.</li>
-<li>The bundled JSON Schemas under <code>augur_sdk._schema/json/</code> track the
-  upstream schemas at the version pinned in <code>SUPPORTED_SCHEMA_RANGE</code>.</li>
+<li><code>SUPPORTED_SCHEMA_RANGE</code> tracks the JSON Schema <strong>content</strong> version
+  (the <code>$id</code> segment, e.g. <code>0.1</code> in
+  <code>.../schemas/0.1/step_trace.schema.json</code>), <strong>not</strong> the <code>augur-schema</code>
+  PyPI package version. The schemas themselves live in the
+  <a href="https://pypi.org/project/augur-schema/"><code>augur-schema</code></a> dep — see
+  the dep-migration note in CHANGELOG 0.2.0. Additive fields in the
+  dep (e.g. <code>step_iterations</code>, added in <code>augur-schema 0.3.2</code>) keep
+  the content version at <code>0.1</code>; only a structural break bumps the
+  range here.</li>
 </ul>
 <h2 id="6-non-goals-dont-ask-the-sdk-for-these">6. Non-goals (don't ask the SDK for these)<a class="headerlink" href="#6-non-goals-dont-ask-the-sdk-for-these" title="Permanent link">&para;</a></h2>
 <p>The SDK does not:</p>
