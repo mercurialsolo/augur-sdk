@@ -23,6 +23,7 @@ class DebugSession:
         tags: dict[str, str] | None = None,
         started_at: str | None = None,
         dsn: str | None = None,
+        capture_logprobs: bool = False,
     ): ...
 
     def record_step(self, step: StepTrace) -> None: ...
@@ -60,6 +61,7 @@ class DebugSession:
 | `tags`              | `{}`                                   | Free-form key/value, surfaces in viewer filters                          |
 | `started_at`        | now (UTC ISO-8601)                     | Override when bridging a post-hoc adapter                                |
 | `dsn`               | `AUGUR_DSN` env var                    | When set, the SDK streams + heartbeats; bundle is still written locally  |
+| `capture_logprobs`  | `False`                                | When `True`, populate `modelio.response.logprobs` with per-token data (since 0.5.0) |
 
 ### Lifecycle
 
@@ -335,6 +337,74 @@ enabled modelio capture), the sink latches off for the rest of
 the session and subsequent records skip the network entirely;
 they still land in the bundle on `close()`. All other errors are
 logged at DEBUG and do not disable streaming.
+
+### Per-token logprob capture (since 0.5.0)
+
+For policy-gradient training (PPO, GRPO) and efficient DPO, consumers
+need behavior-policy probabilities at the time of the model call.
+0.5.0 wires the SDK to populate `modelio.response.logprobs` shipped
+in `augur-schema 0.3.3`.
+
+Opt in at the session level — off by default because logprobs roughly
+double the OpenAI response payload size:
+
+```python
+session = DebugSession(
+    run_id="...",
+    client_name="...",
+    out_dir="...",
+    capture_logprobs=True,
+)
+```
+
+Adapters read `session.capture_logprobs` to decide whether to pass
+`top_logprobs=N` on outbound model calls. After the call returns, map
+the vendor response to the canonical shape and stamp it on
+`response.logprobs` before calling `record_modelio`:
+
+```python
+from augur_sdk import DebugSession, ModelApiAdapterBase
+
+logprobs = ModelApiAdapterBase.extract_logprobs_from_response(api_response)
+# Canonical: list[{"token", "token_id"?, "logprob", "top_alternatives"?[]}]
+# or None when the vendor returned nothing recognisable.
+
+session.record_modelio(
+    {
+        "layer": "model",
+        "request": {...},
+        "response": {
+            "text": api_response["choices"][0]["message"]["content"],
+            "logprobs": logprobs,
+        },
+    },
+    step_index=step_index,
+)
+```
+
+When `capture_logprobs=True` and the producer doesn't stamp anything
+on the response, the SDK defaults `response.logprobs = []` so consumers
+can tell "requested but vendor returned nothing" (empty array) from
+"not requested" (field absent / null).
+
+`extract_logprobs_from_response` recognises:
+
+- **OpenAI** Chat Completions / Responses — `choices[].logprobs.content[]`
+  with `{token, logprob, bytes?, top_logprobs?[]}`. `token_id` null
+  unless the provider surfaces it (e.g. vLLM via OpenAI-compatible mode).
+- **Anthropic** Messages — `content[].logprobs[]` with
+  `{token, logprob, top_logprobs?[]}`. `token_id` always null on the
+  public API.
+
+Adapters with a non-standard shape SHOULD construct the canonical list
+themselves and stamp it on `response.logprobs` directly — the helper
+is a convenience, not a contract.
+
+The default redaction policy is **context-aware** for logprob entries:
+the generic `token`-key mask (intended for API / bearer tokens) is
+skipped when the parent dict carries a numeric `logprob`, so the
+decoded model-output tokens survive redaction. The generic rule still
+defends every other surface.
 
 ### Sentry-for-CUA primitives (since 0.1.13)
 

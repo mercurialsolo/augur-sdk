@@ -114,12 +114,25 @@ class RedactionPolicy:
     def apply(self, value: Any, *, key: str | None = None) -> Any:
         """Walk `value`, returning a redacted copy."""
         if isinstance(value, dict):
+            # augur-sdk#40: in a per-token logprob entry the `token`
+            # field is decoded model output, not an auth token — the
+            # generic mask_keys rule would otherwise destroy the
+            # training-data signal. We detect the context by sibling
+            # presence of `logprob` (numeric, required on every entry
+            # per modelio.schema.json#response.logprobs). The same
+            # carve-out applies to `top_alternatives[]` entries since
+            # their shape mirrors the parent.
+            is_logprob_entry = (
+                "logprob" in value and isinstance(value["logprob"], (int, float))
+            )
             out: dict[str, Any] = {}
             for k, v in value.items():
                 klow = k.lower()
                 if klow in self.drop_keys or any(d(k, v) for d in self.droppers):
                     continue
-                if klow in self.mask_keys:
+                if klow in self.mask_keys and not (
+                    is_logprob_entry and klow in ("token", "token_id")
+                ):
                     out[k] = "***REDACTED:mask***"
                     continue
                 out[k] = self.apply(v, key=klow)

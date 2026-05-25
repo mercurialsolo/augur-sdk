@@ -72,6 +72,7 @@ class DebugSession:
         started_at: str | None = None,
         dsn: str | None = None,
         branch_context: dict[str, Any] | None = None,
+        capture_logprobs: bool = False,
     ) -> None:
         self.run_id = run_id
         self.debug_session_id = debug_session_id or _gen_debug_session_id()
@@ -124,6 +125,14 @@ class DebugSession:
         # as a parent-only "orchestrator" row that aggregates fanout
         # children. record_step / record_step_iteration raise on these.
         self._is_orchestrator: bool = False
+        # augur-sdk#40: producer-level opt-in for per-token logprob
+        # capture on modelio records. Off by default — logprobs roughly
+        # double the response payload size on OpenAI and add a small
+        # cost on some providers. Adapters read this flag to decide
+        # whether to pass top_logprobs=N on outbound model calls; the
+        # SDK reads it in record_modelio() to enforce the requested-
+        # but-vendor-returned-nothing contract.
+        self._capture_logprobs: bool = bool(capture_logprobs)
 
     # -- branching replay (#25) -----------------------------------------
 
@@ -1404,6 +1413,19 @@ class DebugSession:
         if step_index is not None:
             rec.setdefault("step_index", step_index)
 
+        # augur-sdk#40: when the session opted into per-token logprob
+        # capture but the producer didn't stamp anything on the
+        # response, default to an empty array. This lets consumers
+        # distinguish "logprobs not requested" (field absent / null
+        # — the schema default) from "requested but the vendor
+        # returned nothing" (empty array). Producers that DID receive
+        # logprobs put them on `response.logprobs` themselves; this
+        # branch only fires when the field is entirely absent.
+        if self._capture_logprobs:
+            response = rec.get("response")
+            if isinstance(response, dict) and "logprobs" not in response:
+                response["logprobs"] = []
+
         # Idempotency: same prompt_hash → same path, no duplicate stage.
         prompt_hash = rec.get("prompt_hash")
         if isinstance(prompt_hash, str):
@@ -1527,6 +1549,15 @@ class DebugSession:
     @property
     def manifest(self) -> BundleManifest | None:
         return self._manifest
+
+    @property
+    def capture_logprobs(self) -> bool:
+        """Whether this session is configured to capture per-token
+        logprobs on modelio records (#40). Adapters read this flag to
+        decide whether to pass ``top_logprobs=N`` on outbound model
+        calls; the SDK uses it to enforce the requested-but-empty
+        contract in :py:meth:`record_modelio`."""
+        return self._capture_logprobs
 
     @property
     def branch_mode(self) -> str | None:

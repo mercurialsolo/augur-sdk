@@ -210,6 +210,111 @@ class ModelApiAdapterBase:
         return output_dir
 
     @staticmethod
+    def extract_logprobs_from_response(
+        response: dict[str, Any],
+    ) -> list[dict[str, Any]] | None:
+        """Map a vendor response to the canonical
+        ``modelio.response.logprobs`` shape (#40).
+
+        Returns a list of ``{token, token_id, logprob, top_alternatives}``
+        entries, or ``None`` when the vendor didn't return logprobs
+        (so the producer can leave ``response.logprobs`` absent — which
+        the schema reads as "not requested"). An empty list is
+        returned when the vendor was clearly asked but emitted no
+        token-level data (e.g. a tool-only response on a provider that
+        only surfaces text-token logprobs).
+
+        Recognised shapes:
+
+        - **OpenAI Chat Completions / Responses** — ``choices[0].logprobs.content[]``
+          carries ``{token, logprob, bytes?, top_logprobs?[]}``.
+          ``token_id`` is null (OpenAI's public API doesn't surface
+          vendor token ids).
+        - **Anthropic Messages** — ``content[].logprobs[]`` (or
+          ``content[].logprobs.content[]`` on some preview shapes)
+          carries ``{token, logprob, top_logprobs?[]}``. ``token_id``
+          is null.
+
+        Adapters with a non-standard provider shape SHOULD construct
+        the canonical list themselves and stamp it on
+        ``response.logprobs`` directly — this helper is a convenience,
+        not a contract.
+        """
+        # OpenAI Chat Completions: choices[].logprobs.content[]
+        choices = response.get("choices")
+        if isinstance(choices, list) and choices:
+            first = choices[0]
+            if isinstance(first, dict):
+                lp_block = first.get("logprobs")
+                if isinstance(lp_block, dict):
+                    content = lp_block.get("content")
+                    if isinstance(content, list):
+                        return [
+                            ModelApiAdapterBase._normalize_logprob_entry(e)
+                            for e in content
+                            if isinstance(e, dict)
+                        ]
+
+        # Anthropic Messages: content[].logprobs (and nested .content
+        # on some preview shapes).
+        content = response.get("content")
+        if isinstance(content, list):
+            collected: list[dict[str, Any]] = []
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                lp = block.get("logprobs")
+                if isinstance(lp, list):
+                    collected.extend(
+                        ModelApiAdapterBase._normalize_logprob_entry(e)
+                        for e in lp
+                        if isinstance(e, dict)
+                    )
+                elif isinstance(lp, dict):
+                    inner = lp.get("content")
+                    if isinstance(inner, list):
+                        collected.extend(
+                            ModelApiAdapterBase._normalize_logprob_entry(e)
+                            for e in inner
+                            if isinstance(e, dict)
+                        )
+            if collected:
+                return collected
+
+        return None
+
+    @staticmethod
+    def _normalize_logprob_entry(entry: dict[str, Any]) -> dict[str, Any]:
+        """Pull the canonical ``{token, token_id, logprob, top_alternatives}``
+        from a vendor-shaped entry. Both OpenAI and Anthropic carry the
+        chosen-token info under ``token``/``logprob`` directly; the
+        alternative-tokens list is under ``top_logprobs`` on both."""
+        out: dict[str, Any] = {"logprob": float(entry["logprob"])}
+        token = entry.get("token")
+        if isinstance(token, str):
+            out["token"] = token
+        token_id = entry.get("token_id")
+        if isinstance(token_id, int):
+            out["token_id"] = token_id
+        top = entry.get("top_logprobs") or entry.get("top_alternatives")
+        if isinstance(top, list):
+            alternatives: list[dict[str, Any]] = []
+            for alt in top:
+                if not isinstance(alt, dict) or "logprob" not in alt:
+                    continue
+                alt_entry: dict[str, Any] = {"logprob": float(alt["logprob"])}
+                alt_token = alt.get("token")
+                if isinstance(alt_token, str):
+                    alt_entry["token"] = alt_token
+                alt_token_id = alt.get("token_id")
+                if isinstance(alt_token_id, int):
+                    alt_entry["token_id"] = alt_token_id
+                alternatives.append(alt_entry)
+            if alternatives:
+                out["top_alternatives"] = alternatives
+        return out
+
+    @staticmethod
     def extract_reasoning_from_response(
         response: dict[str, Any],
     ) -> list[dict[str, Any]]:
