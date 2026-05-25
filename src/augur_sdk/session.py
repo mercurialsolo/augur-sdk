@@ -36,6 +36,14 @@ from augur_sdk.streaming import DSN, StreamingSink
 
 _VERDICT_COMPARATORS = {"verifier", "model-judge", "exact-match", "human"}
 
+# augur-sdk#38: tag convention for parent-only "orchestrator" sessions
+# opened via `DebugSession.open_orchestrator()`. Lives in `session.tags`
+# so it round-trips through the existing schema without a bump — viewers
+# read it to decide whether to render the session as a parent row (no
+# step list, aggregate stats only) instead of a flat sibling.
+ORCHESTRATOR_TAG_KEY = "augur.session_type"
+ORCHESTRATOR_TAG_VALUE = "orchestrator"
+
 
 def _utcnow_iso() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -112,6 +120,10 @@ class DebugSession:
         # #25: set by branch_from() classmethod when constructing a
         # replay-branch session; None for production runs.
         self._branch_mode: str | None = None
+        # augur-sdk#38: set by open_orchestrator() to mark this session
+        # as a parent-only "orchestrator" row that aggregates fanout
+        # children. record_step / record_step_iteration raise on these.
+        self._is_orchestrator: bool = False
 
     # -- branching replay (#25) -----------------------------------------
 
@@ -299,6 +311,89 @@ class DebugSession:
         finally:
             self._open = was_open
 
+    # -- fanout orchestrator (#38) --------------------------------------
+
+    @classmethod
+    def open_orchestrator(
+        cls,
+        *,
+        run_id: str,
+        client_name: str,
+        out_dir: str | Path,
+        session_name: str | None = None,
+        tenant_id: str | None = None,
+        tags: dict[str, str] | None = None,
+        **session_kwargs: Any,
+    ) -> DebugSession:
+        """Open a parent-only "orchestrator" session for a fanout pattern.
+
+        When a producer fans out work across N child sessions (each
+        carrying ``branch_context.parent_run_id=<this run_id>``), the
+        orchestrator session is the row that surfaces aggregate
+        metadata — phase counts, fanout strategy, total budget — that
+        no single child owns. It records no steps of its own.
+
+        The session is marked with the ``augur.session_type=orchestrator``
+        tag so viewers know to render it as a parent row (aggregate stats,
+        no step list) instead of a flat sibling. ``record_step`` and
+        ``record_step_iteration`` raise ``RuntimeError`` to make the
+        contract explicit; ``set_costs``, ``add_tag``,
+        ``set_live_endpoints``, ``finalize_outcome``, and other
+        session-level helpers work normally.
+
+        ``session_name`` and ``tenant_id`` are conveniences that land in
+        ``session.tags`` under those keys when provided; pass them
+        directly via ``tags=`` if you prefer.
+
+        Any other :py:class:`DebugSession` kwarg
+        (``capture_mode``, ``redaction_policy``, ``dsn``, …) can be
+        passed through ``**session_kwargs`` — orchestrator sessions are
+        ordinary :py:class:`DebugSession` instances apart from the
+        no-steps contract.
+
+        See ``docs/concepts/fanout-grouping.md`` for the grouping
+        contract this helper pairs with.
+        """
+        # Avoid colliding with explicit constructor args coming through
+        # **session_kwargs — open_orchestrator owns the canonical ones.
+        for forbidden in ("run_id", "client_name", "out_dir", "tags", "branch_context"):
+            session_kwargs.pop(forbidden, None)
+
+        merged_tags: dict[str, str] = dict(tags or {})
+        merged_tags[ORCHESTRATOR_TAG_KEY] = ORCHESTRATOR_TAG_VALUE
+        if session_name is not None:
+            merged_tags.setdefault("session_name", session_name)
+        if tenant_id is not None:
+            merged_tags.setdefault("tenant_id", tenant_id)
+
+        session = cls(
+            run_id=run_id,
+            client_name=client_name,
+            out_dir=out_dir,
+            tags=merged_tags,
+            **session_kwargs,
+        )
+        session._is_orchestrator = True
+        return session
+
+    @property
+    def is_orchestrator(self) -> bool:
+        """True when this session was opened via
+        :py:meth:`open_orchestrator` — it carries aggregate
+        tags/costs/metadata for a fanout pattern and records no steps
+        of its own (#38)."""
+        return self._is_orchestrator
+
+    def _forbid_step_recording(self, method: str) -> None:
+        if self._is_orchestrator:
+            raise RuntimeError(
+                f"{method}() is not supported on an orchestrator session "
+                f"(opened via DebugSession.open_orchestrator). Orchestrator "
+                f"sessions carry aggregate metadata only — record steps on "
+                f"the child sessions that share "
+                f"branch_context.parent_run_id={self.run_id!r}."
+            )
+
     # -- lifecycle --
 
     def __enter__(self) -> DebugSession:
@@ -363,6 +458,7 @@ class DebugSession:
 
     def record_step(self, step: StepTrace) -> None:
         self._require_open()
+        self._forbid_step_recording("record_step")
         # Per-step capture_mode override (#36): if set_capture_mode()
         # changed the active mode since the last record_step, stamp
         # the override onto this step (and only this one; the override
@@ -426,6 +522,7 @@ class DebugSession:
         Raises ``ValueError`` if no canonical step exists at the
         resolved index (call :py:meth:`record_step` first)."""
         self._require_open()
+        self._forbid_step_recording("record_step_iteration")
         if isinstance(step_id_or_index, int):
             canonical_idx = step_id_or_index
         else:
@@ -486,6 +583,7 @@ class DebugSession:
         """Stage a PNG screenshot. Returns the bundle-relative path that the
         adapter SHOULD assign to `step.observation_pre/post`."""
         self._require_open()
+        self._forbid_step_recording("attach_observation")
         if kind not in ("pre", "post"):
             raise ValueError(f"kind must be 'pre' or 'post', got {kind!r}")
         relpath = f"screenshots/{step_index:04d}_{kind}.png"

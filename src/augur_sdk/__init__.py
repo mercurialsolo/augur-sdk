@@ -35,7 +35,11 @@ from augur_sdk.redaction import (
     DefaultRedactionPolicy,
     RedactionPolicy,
 )
-from augur_sdk.session import DebugSession
+from augur_sdk.session import (
+    ORCHESTRATOR_TAG_KEY,
+    ORCHESTRATOR_TAG_VALUE,
+    DebugSession,
+)
 from augur_sdk.storage import LocalFSStore, S3Store, Store
 
 __all__ = [
@@ -57,6 +61,8 @@ __all__ = [
     "JudgeDecision",
     "LocalFSStore",
     "ModelApiAdapterBase",
+    "ORCHESTRATOR_TAG_KEY",
+    "ORCHESTRATOR_TAG_VALUE",
     "Observation",
     "RecoveryDecision",
     "RedactionPolicy",

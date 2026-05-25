@@ -264,6 +264,23 @@ def branch_from(
 
 @property
 def branch_mode(self) -> str | None: ...
+
+# Fanout-orchestrator helper (since 0.4.0)
+@classmethod
+def open_orchestrator(
+    cls,
+    *,
+    run_id: str,
+    client_name: str,
+    out_dir: str | Path,
+    session_name: str | None = None,
+    tenant_id: str | None = None,
+    tags: dict[str, str] | None = None,
+    **session_kwargs,
+) -> DebugSession: ...
+
+@property
+def is_orchestrator(self) -> bool: ...
 ```
 
 `set_capture_mode(mode)` stamps `capture_mode` on every subsequent
@@ -477,6 +494,51 @@ override. Any other `DebugSession` kwarg (`tags`, `client_version`,
 
 The resolved mode is exposed on `session.branch_mode` for callers and
 tests that want to introspect after construction.
+
+### `DebugSession.open_orchestrator(...)` (since 0.4.0)
+
+Opens a **parent-only "orchestrator" session** for fanout patterns.
+When a producer fans out work across N child sessions (each carrying
+`branch_context.parent_run_id=<orchestrator.run_id>`), the orchestrator
+session is the row that surfaces aggregate metadata — phase counts,
+fanout strategy, total budget — that no single child owns. It records
+no steps of its own.
+
+```python
+with DebugSession.open_orchestrator(
+    run_id="fanout-20b9a4786aa3-4e136449",
+    client_name="myproducer",
+    out_dir="parent-bundle/",
+    session_name="boattrader-fanout (4 workers)",
+    tenant_id="acme",
+    tags={
+        "phase1_workers": "4",
+        "fanout_pattern": "phase1_collect_phase2_extract",
+    },
+) as parent:
+    # Spawn N child sessions, each with
+    # branch_context.parent_run_id=parent.run_id
+    ...
+    parent.set_costs(total_usd=sum(c.cost for c in completed_children))
+```
+
+Semantics:
+
+- Marks `session.tags` with `augur.session_type=orchestrator`
+  (exported as `augur_sdk.ORCHESTRATOR_TAG_KEY` /
+  `ORCHESTRATOR_TAG_VALUE`) so the server / viewer can render it
+  differently (aggregate stats, no step list).
+- `record_step`, `record_step_iteration`, and `attach_observation`
+  raise `RuntimeError` — record steps on the child sessions that share
+  the `parent_run_id`.
+- `set_costs`, `add_tag`, `set_live_endpoints`, `finalize_outcome` and
+  the other session-level helpers work normally.
+- `session_name` and `tenant_id` are conveniences that land in
+  `session.tags` under those keys when provided; pass them directly via
+  `tags=` if you prefer (explicit `tags={...}` entries win).
+
+See [concepts/fanout-grouping.md](../concepts/fanout-grouping.md) for
+the grouping contract this helper pairs with (augur-sdk#38).
 
 `bind_intervention(adapter)` wires up a long-poll on
 `GET <DSN-base>/runs/<run_id>/commands` and dispatches received
