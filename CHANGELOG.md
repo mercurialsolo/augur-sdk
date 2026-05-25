@@ -6,6 +6,49 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-05-24
+
+### `set_costs` now streams live (closes #34)
+
+`DebugSession.set_costs(...)` no longer waits for `close()` to surface the
+run-level cumulative cost. With a `dsn` configured, every call now PUTs
+the cumulative dict to `/api/v1/runs/{run_id}/costs` immediately so the
+Augur viewer's Runs-list COST column tracks the producer's running total
+in real time.
+
+Fixes the non-monotonic UI value caused by 0.3.0's per-iteration step
+PUTs overwriting a canonical step's `costs` field — sum-over-steps on
+the viewer was no longer monotonic. Cumulative cost is the right surface
+because the producer already maintains it (budget caps need it), cost
+is monotonic by construction, and cumulative emissions survive dropped
+events where deltas don't.
+
+Paired with the server-side endpoint shipped in `mercurialsolo/augur#137`.
+
+- **`StreamingSink.put_session_costs(costs)`** — new method. Routes
+  through the shared `_request_with_retry` helper from 0.2.2 (#27),
+  so the 429+`Retry-After` contract on the new endpoint is honoured
+  for free.
+- **`DebugSession.set_costs(...)`** — patches the in-memory dict as
+  before, then PUTs the cumulative if any dimension was set. No PUT
+  fires for `set_costs()` with no kwargs (defensive callers don't
+  spam the ingest queue).
+- **Server compatibility** — falls back to bundle-only behavior
+  against pre-#137 servers (the PUT returns 404, logged at DEBUG by
+  the existing `_post_json` error path; the local bundle still owns
+  `session.costs` on close).
+- **No schema change** — `debug_session.costs` already exists in
+  `augur-schema 0.3.2`; the PUT body is just that sub-object.
+
+### Tests
+
+- `tests/test_live_session_costs.py` (8 tests) — wire format on the
+  new route, empty-payload no-op, 429 retry, double-429 drop, the
+  cumulative-not-delta contract across multiple `set_costs` calls,
+  no-kwargs no-op, no-DSN local-only path, and a regression guard
+  that `close()` still writes `session.costs` to trace.json. Full
+  suite: 231 tests, all green.
+
 ## [0.3.0] — 2026-05-24
 
 ### Step-iteration semantics (closes #30, #31)
