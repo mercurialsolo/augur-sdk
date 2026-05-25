@@ -6,6 +6,81 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-05-25
+
+### Producer support for augur-schema 0.4.0 — RL training metadata (closes #41)
+
+`augur-schema 0.4.1` adds the metadata that makes Augur a portable
+**online-RL training platform**: session-level `TaskSpec`, per-step
+`subgoals_completed`, `group_id` for grouped-rollout RL (GRPO),
+`verdict.should_stop` + `verdict.uncertainty`, and a documented
+canonical `score_components` vocabulary. 0.6.0 surfaces those cleanly
+on the SDK so producers don't have to poke at raw schema dicts.
+
+- **`DebugSession(task_spec=..., task_spec_id=..., group_id=...)`** —
+  three new constructor kwargs. `task_spec` is the full structured
+  definition (instruction, max_steps, prohibited_actions,
+  success_conditions, subgoals, reset_state_id, task_seed, env_id);
+  `task_spec_id` is the shortcut for producers maintaining an
+  external task-spec library; `group_id` correlates rollouts
+  spawned by the same training-loop batch.
+- **`session.set_task_spec(...)`** / **`set_task_spec_id(...)`** /
+  **`set_group_id(...)`** — setters for post-construction adjustment.
+- **`group_id` auto-propagates to every recorded step.** Mirrors the
+  branch_context propagation pattern from 0.2.1 — RL pipelines can
+  group siblings by `step.group_id` without joining back to the
+  session record.
+- **`session.record_subgoal_completion(step_index, subgoal_id, completion)`**
+  — patches `step.subgoals_completed` with the canonical
+  `{subgoal_id, completion, first_completed_at_step?}` entry. The
+  SDK tracks first-time-1.0 across the session and auto-fills
+  `first_completed_at_step` so producers don't need bookkeeping.
+  Warns when `subgoal_id` isn't declared in `task_spec.subgoals`
+  (the schema still accepts unknown ids; warn is producer-facing).
+- **`session.set_loop_detected(step_index, value=True)`** — stamps
+  `step.loop_detected`. Producers SHOULD set this when their own
+  state-repetition check (typically observation phash adjacency)
+  flags a step; consumers then skip rediscovering loops.
+- **`session.set_score(..., should_stop=..., uncertainty=...)`** —
+  the existing setter gains two RL kwargs. `should_stop` is the
+  producer-side recommendation that the agent halt here (positive =
+  task complete, negative paired with high `safety_risk` /
+  `loopiness` = continued action unsafe / pointless). `uncertainty`
+  is the verdict-level confidence summary in [0, 1].
+- **`ScoreComponents` canonical-key constants** — new module
+  (`augur_sdk.rewards`) and re-export. Producers can write
+  `ScoreComponents.PROGRESS` instead of typing `"progress"`,
+  nudging cross-producer training toward the documented vocabulary
+  without rejecting adapter-specific keys (the schema is open via
+  `additionalProperties: true`).
+- **`TaskSpec`, `Subgoal`, `SuccessCondition`, `SubgoalCompletion`**
+  TypedDicts added to `augur_sdk.models` and re-exported. Pass dicts
+  directly to the SDK — no construction step.
+- **Schema dep bumped to `augur-schema>=0.4.1,<0.5`.** 0.4.1 fixes
+  an upstream loader bug where `task_spec.schema.json` and
+  `subgoal.schema.json` shipped in the wheel but weren't registered
+  with `_SCHEMA_FILES`, making `$ref: task_spec.schema.json` from
+  `debug_session.schema.json` unresolvable. The SDK can't usefully
+  pin to 0.4.0.
+
+Additive — sessions that don't touch any of the new surface emit
+bundles indistinguishable from 0.5.x output.
+
+### Tests
+
+- `tests/test_task_spec.py` (22 tests) — TaskSpec on session record
+  + the task_spec_id shortcut; post-construction setters; missing-
+  instruction and duplicate-subgoal_id guards; group_id propagation
+  (constructor, late-set, explicit-step-override-wins);
+  record_subgoal_completion happy path + auto
+  `first_completed_at_step` across multiple steps + clamping +
+  unknown-id warning + no-task_spec quiet path + same-subgoal
+  last-write-wins; set_loop_detected; set_score should_stop +
+  uncertainty (incl. clamping); ScoreComponents constants stay in
+  sync with the canonical set; end-to-end round-trip validating
+  against `augur-schema 0.4.1`; back-compat (no new fields → still
+  valid). **Full suite: 277 tests, all green.**
+
 ## [0.5.0] — 2026-05-25
 
 ### Per-token logprob capture in modelio.response (closes #40)
