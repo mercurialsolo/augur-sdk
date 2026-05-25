@@ -70,14 +70,20 @@ def test_single_emission_keeps_flat_step_file(tmp_path: Path) -> None:
 
 def test_update_same_step_id_is_idempotent(tmp_path: Path) -> None:
     """``running`` → ``succeeded`` update under the same step_id stays
-    last-write-wins. Re-recording is not an iteration."""
+    last-write-wins and MUST NOT emit a DeprecationWarning — the issue
+    explicitly preserves ``record_step()``'s "existing single-emission
+    semantics" for this common producer pattern."""
     out = tmp_path / "bundle"
-    with DebugSession(
-        run_id="run_a",
-        client_name="testclient",
-        capture_mode=CaptureMode.METADATA,
-        out_dir=out,
-    ) as s:
+    with (
+        DebugSession(
+            run_id="run_a",
+            client_name="testclient",
+            capture_mode=CaptureMode.METADATA,
+            out_dir=out,
+        ) as s,
+        warnings.catch_warnings(),
+    ):
+        warnings.simplefilter("error", DeprecationWarning)
         running = _step("run_a", 0)
         running["status"] = "running"
         s.record_step(running)
@@ -137,7 +143,12 @@ def test_record_step_distinct_step_ids_produces_two_files(tmp_path: Path) -> Non
 def test_record_step_iteration_bumps_counter_and_persists_iterations(
     tmp_path: Path,
 ) -> None:
+    """Issue #31 round-trip exit criterion: emit 1 canonical step + 5
+    iterations, close, reload — ``step_iterations == 6`` and all 6
+    iteration payloads MUST be addressable by step_id from disk."""
     out = tmp_path / "bundle"
+    expected_step_ids: list[str] = []
+    expected_intents: dict[str, str] = {}
     with DebugSession(
         run_id="run_c",
         client_name="testclient",
@@ -145,25 +156,45 @@ def test_record_step_iteration_bumps_counter_and_persists_iterations(
         out_dir=out,
     ) as s:
         canonical = _step("run_c", 0)
+        canonical["intent"] = "canonical click"
         s.record_step(canonical)
+        expected_step_ids.append(canonical["step_id"])
+        expected_intents[canonical["step_id"]] = "canonical click"
         for i in range(1, 6):
-            s.record_step_iteration(0, _step("run_c", 0, suffix=str(i)))
+            iter_payload = _step("run_c", 0, suffix=str(i))
+            iter_payload["intent"] = f"iteration {i}"
+            s.record_step_iteration(0, iter_payload)
+            expected_step_ids.append(iter_payload["step_id"])
+            expected_intents[iter_payload["step_id"]] = f"iteration {i}"
 
-    # 1 canonical + 5 iterations → 6 files, step_iterations=6 on canonical.
+    # 1 canonical + 5 iterations → 6 files.
     iter_dir = out / "steps" / "0000"
     assert iter_dir.is_dir()
     files = sorted(iter_dir.glob("*.json"))
     assert len(files) == 6
 
+    # Reload + index by step_id. Every iteration's payload MUST be
+    # addressable from disk; payloads MUST be distinct (no overwrites).
+    by_id: dict[str, dict[str, Any]] = {
+        json.loads(p.read_text())["step_id"]: json.loads(p.read_text())
+        for p in files
+    }
+    assert set(by_id) == set(expected_step_ids)
+    for sid, intent in expected_intents.items():
+        assert by_id[sid]["intent"] == intent
+        assert by_id[sid]["step_index"] == 0
+
+    # step_iterations == 6 on the canonical, both in trace.json and on
+    # the canonical's per-iteration file.
     trace = json.loads((out / "trace.json").read_text())
     assert len(trace["steps"]) == 1
     assert trace["steps"][0]["step_iterations"] == 6
+    assert by_id[canonical["step_id"]]["step_iterations"] == 6
+    # Iteration payloads SHOULD NOT carry the counter — only the
+    # canonical does. Otherwise consumers would double-count.
+    for sid in expected_step_ids[1:]:
+        assert "step_iterations" not in by_id[sid]
 
-    canonical_short = _short(canonical["step_id"])
-    canonical_on_disk = json.loads(
-        (iter_dir / f"{canonical_short}.json").read_text()
-    )
-    assert canonical_on_disk["step_iterations"] == 6
     assert validate_bundle(out) == []
 
 
