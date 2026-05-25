@@ -707,6 +707,15 @@ the chunk to `/api/v1/runs/<run_id>/logs`; the server routes it to
 
 ```python
 import augur_sdk
-augur_sdk.__version__               # "0.1.0"
+augur_sdk.__version__               # e.g. "0.3.0" — SDK release version
+
+# Range of JSON Schema CONTENT versions this SDK can produce + read
+# (the `$id` segment, not the `augur-schema` package version).
+# Additive field updates in `augur-schema` (e.g. `step_iterations`
+# in 0.3.2) do NOT bump this — they slot into the same content
+# version. See SPEC §5.
 augur_sdk.SUPPORTED_SCHEMA_RANGE    # ("0.1", "0.1")
+
+from augur_schema import SCHEMA_VERSION
+SCHEMA_VERSION                       # authoritative content version
 ```

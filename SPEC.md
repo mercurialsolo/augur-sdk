@@ -364,8 +364,15 @@ that share their canonical's `step_index` but carry distinct
   note in `CHANGELOG.md`.
 - Post-1.0: minors are strictly additive; only majors break.
 - `__version__` and `SUPPORTED_SCHEMA_RANGE` are introspectable at runtime.
-- The bundled JSON Schemas under `augur_sdk._schema/json/` track the
-  upstream schemas at the version pinned in `SUPPORTED_SCHEMA_RANGE`.
+- `SUPPORTED_SCHEMA_RANGE` tracks the JSON Schema **content** version
+  (the `$id` segment, e.g. `0.1` in
+  `.../schemas/0.1/step_trace.schema.json`), **not** the `augur-schema`
+  PyPI package version. The schemas themselves live in the
+  [`augur-schema`](https://pypi.org/project/augur-schema/) dep — see
+  the dep-migration note in CHANGELOG 0.2.0. Additive fields in the
+  dep (e.g. `step_iterations`, added in `augur-schema 0.3.2`) keep
+  the content version at `0.1`; only a structural break bumps the
+  range here.
 
 ## 6. Non-goals (don't ask the SDK for these)
 
