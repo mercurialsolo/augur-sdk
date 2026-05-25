@@ -73,6 +73,9 @@ class DebugSession:
         dsn: str | None = None,
         branch_context: dict[str, Any] | None = None,
         capture_logprobs: bool = False,
+        task_spec: dict[str, Any] | None = None,
+        task_spec_id: str | None = None,
+        group_id: str | None = None,
     ) -> None:
         self.run_id = run_id
         self.debug_session_id = debug_session_id or _gen_debug_session_id()
@@ -125,6 +128,24 @@ class DebugSession:
         # as a parent-only "orchestrator" row that aggregates fanout
         # children. record_step / record_step_iteration raise on these.
         self._is_orchestrator: bool = False
+        # augur-sdk#41: session-level task spec for RL training
+        # (augur-schema 0.4.0). task_spec carries the full structured
+        # task definition; task_spec_id is the shortcut form for
+        # producers maintaining an external task-spec library. Both
+        # are optional — production runs MAY omit them.
+        self._task_spec: dict[str, Any] | None = (
+            self._validate_task_spec(task_spec) if task_spec is not None else None
+        )
+        self._task_spec_id: str | None = task_spec_id
+        # augur-sdk#41: grouped-rollout correlation id for GRPO-style
+        # training. Auto-propagates to every recorded step on
+        # `step.group_id` so RL pipelines can group siblings without
+        # joining back to the session.
+        self._group_id: str | None = group_id
+        # augur-sdk#41: tracks the step at which each subgoal first
+        # reached completion=1.0, so record_subgoal_completion() can
+        # auto-fill first_completed_at_step. Keyed by subgoal_id.
+        self._subgoal_first_completed: dict[str, int] = {}
         # augur-sdk#40: producer-level opt-in for per-token logprob
         # capture on modelio records. Off by default — logprobs roughly
         # double the response payload size on OpenAI and add a small
@@ -480,6 +501,11 @@ class DebugSession:
         # without joining back to the session.
         if self._branch_context is not None and "branch_context" not in step:
             step["branch_context"] = self._step_branch_context()  # type: ignore[typeddict-item]
+        # #41: propagate group_id (GRPO sibling correlation) so RL
+        # pipelines can join siblings without walking back to the
+        # session record.
+        if self._group_id is not None and "group_id" not in step:
+            step["group_id"] = self._group_id
         is_new_iteration = self._recorder.record_step(step)
         if is_new_iteration:
             # augur-sdk#31: per-iteration emission should go through
@@ -558,6 +584,8 @@ class DebugSession:
             and "branch_context" not in iter_payload
         ):
             iter_payload["branch_context"] = self._step_branch_context()  # type: ignore[typeddict-item]
+        if self._group_id is not None and "group_id" not in iter_payload:
+            iter_payload["group_id"] = self._group_id
         self._recorder.record_step_iteration(canonical_idx, iter_payload)
         if self._stream is not None:
             # Stream the iteration's StepTrace; the server's idempotency
@@ -709,6 +737,8 @@ class DebugSession:
         *,
         comparator: str | None = None,
         components: dict[str, float] | None = None,
+        should_stop: bool | None = None,
+        uncertainty: float | None = None,
     ) -> None:
         """Attach a continuous reward signal to a recorded step's verdict (#59).
 
@@ -719,6 +749,15 @@ class DebugSession:
         ``components`` is a free-form breakdown (per-criterion
         contributions); each value SHOULD be a float in [0,1] but
         the schema does not enforce that.
+
+        ``should_stop`` (since 0.6.0, augur-schema 0.4.0) is a
+        producer-side recommendation that the agent should halt at
+        this step — either because the task is judged complete
+        (positive) or because continued action is unsafe / pointless
+        (negative, with ``safety_risk`` or ``loopiness`` high in
+        ``components``). ``uncertainty`` (since 0.6.0) is the
+        verdict-level summary of how confident the verifier was, in
+        [0, 1] — 0 = highly confident, 1 = pure guess.
 
         Raises ``ValueError`` when no step exists at ``step_index``
         or when ``comparator`` is not in the canonical set.
@@ -741,10 +780,143 @@ class DebugSession:
                 f"set_score: no step at step_index={step_index}. "
                 f"Record the step first via record_step()."
             )
+        if should_stop is not None or uncertainty is not None:
+            clamped_uncertainty = (
+                max(0.0, min(1.0, float(uncertainty)))
+                if uncertainty is not None
+                else None
+            )
+            self._recorder.merge_step_verdict_signals(
+                step_index,
+                should_stop=should_stop,
+                uncertainty=clamped_uncertainty,
+            )
         if self._stream is not None:
             patched = self._recorder.get_step(step_index)
             if patched is not None:
                 self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    # -- RL training metadata (#41) -------------------------------------
+
+    def set_task_spec(self, spec: dict[str, Any]) -> None:
+        """Set or replace the session's TaskSpec post-construction
+        (augur-schema 0.4.0). Same shape as the ``task_spec=``
+        constructor kwarg. Raises ``ValueError`` for the obvious
+        producer bugs (missing instruction, duplicate subgoal_id);
+        full schema validation runs at bundle close."""
+        self._require_open()
+        self._task_spec = self._validate_task_spec(spec)
+
+    def set_task_spec_id(self, task_spec_id: str) -> None:
+        """Set ``session.task_spec_id`` — the shortcut form for
+        producers maintaining an external task-spec library (#41).
+        Consumers resolving task-level metadata SHOULD prefer
+        ``task_spec`` when both are set."""
+        self._require_open()
+        self._task_spec_id = task_spec_id
+
+    def set_group_id(self, group_id: str) -> None:
+        """Set the grouped-rollout correlation id (#41).
+
+        Subsequent steps recorded after this call carry the new id;
+        earlier steps keep whatever id was in effect when they were
+        recorded. Most producers set ``group_id=...`` at construction
+        time and never call this directly."""
+        self._require_open()
+        self._group_id = group_id
+
+    def record_subgoal_completion(
+        self,
+        step_index: int,
+        subgoal_id: str,
+        completion: float,
+    ) -> None:
+        """Record a subgoal-completion entry on a step (#41).
+
+        ``completion`` is clamped to [0.0, 1.0]. The SDK auto-fills
+        ``first_completed_at_step`` the first time ``completion``
+        hits 1.0 for ``subgoal_id`` within this session — subsequent
+        records for the same subgoal carry that step index forward.
+
+        Warns (via :py:mod:`warnings`) when ``subgoal_id`` isn't
+        declared in ``task_spec.subgoals`` so producers catch typos
+        without the call hard-failing. Records pointing at unknown
+        subgoal_ids are still valid against the schema; consumers MAY
+        drop them.
+
+        Raises ``ValueError`` if no step exists at ``step_index``.
+        """
+        self._require_open()
+        clamped = max(0.0, min(1.0, float(completion)))
+        # Producer-bug guard: warn (not raise) when the id isn't in
+        # task_spec.subgoals — the schema accepts unknown ids and
+        # producers may want to record progress before they've wired
+        # the task_spec.
+        if self._task_spec is not None:
+            declared_ids = {
+                sg.get("subgoal_id")
+                for sg in (self._task_spec.get("subgoals") or [])
+                if isinstance(sg, dict)
+            }
+            if subgoal_id not in declared_ids:
+                warnings.warn(
+                    f"subgoal_id {subgoal_id!r} not declared in "
+                    f"task_spec.subgoals; record_subgoal_completion "
+                    f"still emits but consumers may drop it",
+                    UserWarning,
+                    stacklevel=2,
+                )
+        # Track first-time-1.0 across the session so the per-step
+        # record carries the convenience field without the producer
+        # bookkeeping.
+        if (
+            clamped >= 1.0
+            and subgoal_id not in self._subgoal_first_completed
+        ):
+            self._subgoal_first_completed[subgoal_id] = step_index
+        entry: dict[str, Any] = {
+            "subgoal_id": subgoal_id,
+            "completion": clamped,
+        }
+        first_at = self._subgoal_first_completed.get(subgoal_id)
+        if first_at is not None:
+            entry["first_completed_at_step"] = first_at
+        ok = self._recorder.patch_step_subgoal_completion(
+            step_index, entry=entry
+        )
+        if not ok:
+            raise ValueError(
+                f"record_subgoal_completion: no step at "
+                f"step_index={step_index}. Record the step first "
+                f"via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    def set_loop_detected(
+        self, step_index: int, value: bool = True
+    ) -> None:
+        """Stamp ``step.loop_detected`` on a previously-recorded step
+        (#41). Producers SHOULD set this when their own state-
+        repetition check (typically observation phash adjacency)
+        flags the step; consumers can then skip rediscovering loops
+        from the trajectory. Raises ``ValueError`` if no step exists.
+        """
+        self._require_open()
+        ok = self._recorder.set_step_loop_detected(step_index, value=value)
+        if not ok:
+            raise ValueError(
+                f"set_loop_detected: no step at step_index={step_index}. "
+                f"Record the step first via record_step()."
+            )
+        if self._stream is not None:
+            patched = self._recorder.get_step(step_index)
+            if patched is not None:
+                self._stream.put_step(self.redaction_policy.apply(dict(patched)))
+
+    # -- costs ----------------------------------------------------------
 
     def set_costs(
         self,
@@ -1577,6 +1749,33 @@ class DebugSession:
     # -- internals --
 
     @staticmethod
+    def _validate_task_spec(spec: dict[str, Any]) -> dict[str, Any]:
+        """Sanity-check a TaskSpec at construction time. Only catches
+        the easy producer bugs (missing required field, duplicate
+        subgoal_id); full schema validation runs at bundle close."""
+        if "instruction" not in spec:
+            raise ValueError(
+                "TaskSpec missing required field: 'instruction'"
+            )
+        subgoals = spec.get("subgoals")
+        if isinstance(subgoals, list):
+            seen: set[str] = set()
+            for sg in subgoals:
+                if not isinstance(sg, dict):
+                    continue
+                sid = sg.get("subgoal_id")
+                if not isinstance(sid, str):
+                    raise ValueError(
+                        "TaskSpec.subgoals entry missing 'subgoal_id'"
+                    )
+                if sid in seen:
+                    raise ValueError(
+                        f"TaskSpec.subgoals: duplicate subgoal_id={sid!r}"
+                    )
+                seen.add(sid)
+        return dict(spec)
+
+    @staticmethod
     def _validate_branch_context(ctx: dict[str, Any]) -> dict[str, Any]:
         """Sanity-check a BranchContext at construction time so producer
         bugs (missing axis, unknown axis) surface immediately rather
@@ -1640,6 +1839,10 @@ class DebugSession:
             record["costs"] = dict(self._session_costs)  # type: ignore[typeddict-unknown-key]
         if self._branch_context is not None:
             record["branch_context"] = dict(self._branch_context)  # type: ignore[typeddict-item]
+        if self._task_spec is not None:
+            record["task_spec"] = dict(self._task_spec)  # type: ignore[typeddict-item]
+        if self._task_spec_id is not None:
+            record["task_spec_id"] = self._task_spec_id
         return record
 
 

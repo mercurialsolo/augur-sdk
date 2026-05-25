@@ -1,6 +1,6 @@
 """SDK version + supported schema range."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 # Range of schema **content** versions this SDK can produce and read.
 # Inclusive on both ends.

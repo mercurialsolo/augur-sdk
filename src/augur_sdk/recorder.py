@@ -371,6 +371,72 @@ class EventRecorder:
             step["costs"] = existing  # type: ignore[typeddict-unknown-key]
             return True
 
+    def patch_step_subgoal_completion(
+        self,
+        step_index: int,
+        *,
+        entry: dict[str, Any],
+    ) -> bool:
+        """Upsert a subgoal-completion entry on a step (#41).
+
+        Entries are keyed by ``subgoal_id``; a second call for the same
+        ``subgoal_id`` on the same step overwrites the prior entry."""
+        with self._lock:
+            step = self._canonical_locked(step_index)
+            if step is None:
+                return False
+            existing: list[dict[str, Any]] = [
+                dict(e)
+                for e in (step.get("subgoals_completed") or [])
+                if isinstance(e, dict)
+            ]
+            target_id = entry.get("subgoal_id")
+            replaced = False
+            for i, e in enumerate(existing):
+                if e.get("subgoal_id") == target_id:
+                    existing[i] = dict(entry)
+                    replaced = True
+                    break
+            if not replaced:
+                existing.append(dict(entry))
+            step["subgoals_completed"] = existing  # type: ignore[typeddict-item]
+            return True
+
+    def set_step_loop_detected(
+        self, step_index: int, *, value: bool
+    ) -> bool:
+        """Stamp ``step.loop_detected`` (#41)."""
+        with self._lock:
+            step = self._canonical_locked(step_index)
+            if step is None:
+                return False
+            step["loop_detected"] = value
+            return True
+
+    def merge_step_verdict_signals(
+        self,
+        step_index: int,
+        *,
+        should_stop: bool | None = None,
+        uncertainty: float | None = None,
+    ) -> bool:
+        """Merge verdict-level RL signals (``should_stop``,
+        ``uncertainty``) into a step's verdict without disturbing
+        status / reason / score / components (#41)."""
+        with self._lock:
+            step = self._canonical_locked(step_index)
+            if step is None:
+                return False
+            verdict: dict[str, Any] = dict(
+                step.get("verdict") or {"status": "unknown"}
+            )
+            if should_stop is not None:
+                verdict["should_stop"] = should_stop
+            if uncertainty is not None:
+                verdict["uncertainty"] = uncertainty
+            step["verdict"] = verdict  # type: ignore[typeddict-item]
+            return True
+
     # -- events --
 
     def record_event(self, event: DecisionEvent) -> None:

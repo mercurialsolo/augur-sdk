@@ -25,6 +25,10 @@ from augur_sdk.models import (
     ReplayFixture,
     SideEffect,
     StepTrace,
+    Subgoal,
+    SubgoalCompletion,
+    SuccessCondition,
+    TaskSpec,
     Verdict,
 )
 from augur_sdk.models import (
@@ -35,6 +39,7 @@ from augur_sdk.redaction import (
     DefaultRedactionPolicy,
     RedactionPolicy,
 )
+from augur_sdk.rewards import CANONICAL_SCORE_COMPONENTS, ScoreComponents
 from augur_sdk.session import (
     ORCHESTRATOR_TAG_KEY,
     ORCHESTRATOR_TAG_VALUE,
@@ -48,6 +53,7 @@ __all__ = [
     "BranchContext",
     "BundleManifest",
     "BundleTrace",
+    "CANONICAL_SCORE_COMPONENTS",
     "CaptureMode",
     "CapturedVersions",
     "DEFAULT_POLICY_ID",
@@ -68,10 +74,15 @@ __all__ = [
     "RedactionPolicy",
     "ReplayFixture",
     "S3Store",
+    "ScoreComponents",
     "SideEffect",
     "StepTrace",
     "Store",
     "SUPPORTED_SCHEMA_RANGE",
+    "Subgoal",
+    "SubgoalCompletion",
+    "SuccessCondition",
+    "TaskSpec",
     "Verdict",
     "__version__",
     "resolve_capture_mode",

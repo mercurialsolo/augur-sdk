@@ -24,6 +24,9 @@ class DebugSession:
         started_at: str | None = None,
         dsn: str | None = None,
         capture_logprobs: bool = False,
+        task_spec: dict | None = None,
+        task_spec_id: str | None = None,
+        group_id: str | None = None,
     ): ...
 
     def record_step(self, step: StepTrace) -> None: ...
@@ -62,6 +65,9 @@ class DebugSession:
 | `started_at`        | now (UTC ISO-8601)                     | Override when bridging a post-hoc adapter                                |
 | `dsn`               | `AUGUR_DSN` env var                    | When set, the SDK streams + heartbeats; bundle is still written locally  |
 | `capture_logprobs`  | `False`                                | When `True`, populate `modelio.response.logprobs` with per-token data (since 0.5.0) |
+| `task_spec`         | None                                   | Session-level `TaskSpec` for RL training / online evaluation (since 0.6.0)         |
+| `task_spec_id`      | None                                   | Shortcut for an external task-spec library, when the full `TaskSpec` lives elsewhere (since 0.6.0) |
+| `group_id`          | None                                   | Grouped-rollout correlation id (GRPO); auto-propagates to every recorded step (since 0.6.0) |
 
 ### Lifecycle
 
@@ -406,6 +412,127 @@ skipped when the parent dict carries a numeric `logprob`, so the
 decoded model-output tokens survive redaction. The generic rule still
 defends every other surface.
 
+### RL training metadata (since 0.6.0)
+
+`augur-schema 0.4.1` adds session- and step-level fields for online-RL
+training across producers. The SDK surfaces them so producers don't
+have to poke at raw schema dicts.
+
+**Session-level `TaskSpec`** carries the structured task definition:
+
+```python
+from augur_sdk import DebugSession, ScoreComponents
+
+session = DebugSession(
+    run_id="...",
+    client_name="...",
+    out_dir="...",
+    task_spec={
+        "task_spec_id": "billing.invoice.download.v1",
+        "instruction": "Find the latest invoice from Acme and download it.",
+        "task_class": "saas.billing",
+        "max_steps": 80,
+        "prohibited_actions": ["send_email", "delete_file", "purchase"],
+        "success_conditions": [
+            {"kind": "file_exists", "params": {"path": "/tmp/invoice.pdf"}},
+        ],
+        "reset_state_id": "snap-2026-05-25-acme",
+        "task_seed": 42,
+        "env_id": "internal-crm-staging",
+        "subgoals": [
+            {"subgoal_id": "open_app", "description": "Open the billing app"},
+            {"subgoal_id": "nav_invoices", "description": "Navigate to invoice list",
+             "parent_subgoal_id": "open_app"},
+        ],
+    },
+)
+```
+
+The shortcut form, when the full TaskSpec lives in an external library:
+
+```python
+session = DebugSession(task_spec_id="billing.invoice.download.v1")
+```
+
+Setters allow late-binding: `session.set_task_spec({...})`,
+`session.set_task_spec_id("...")`.
+
+**Grouped-rollout correlation** for GRPO-style training:
+
+```python
+session = DebugSession(group_id="grpo-batch-2026-05-25-0042")
+# Every recorded step.group_id picks up this value automatically.
+```
+
+`session.set_group_id("...")` adjusts post-construction; an explicit
+`step["group_id"]` on `record_step` always wins. `group_id` is distinct
+from `branch_context.parent_run_id` (which models counterfactual
+mutations off a captured parent); `group_id` correlates fresh-from-reset
+siblings.
+
+**Per-step subgoal completion** with auto-tracked first-completion:
+
+```python
+session.record_subgoal_completion(step_index=4, subgoal_id="open_app", completion=1.0)
+# Once completion hits 1.0 for a subgoal_id, subsequent entries for
+# that subgoal carry `first_completed_at_step` automatically.
+```
+
+Warns when `subgoal_id` isn't declared in `task_spec.subgoals` —
+records pointing at unknown ids are still schema-valid, but consumers
+MAY drop them.
+
+**Loop-detection signal**:
+
+```python
+session.set_loop_detected(step_index=7)             # default True
+session.set_loop_detected(step_index=7, value=False) # explicit
+```
+
+Producer-side hint that state-repetition was observed (typically
+`observation.hashes.phash_64` matched a prior step). Saves consumers
+from walking the observation-hash adjacency themselves.
+
+**Verdict additions on `set_score`**:
+
+```python
+session.set_score(
+    step_index=4,
+    score=0.92,
+    comparator="verifier",
+    components={
+        ScoreComponents.PROGRESS: 0.25,
+        ScoreComponents.ACTION_QUALITY: 0.9,
+        ScoreComponents.SAFETY_RISK: 0.0,
+    },
+    should_stop=False,
+    uncertainty=0.08,
+)
+```
+
+`should_stop` is the producer-side recommendation that the agent halt
+here (positive = task complete, negative paired with high `safety_risk`
+or `loopiness` = continued action unsafe / pointless). `uncertainty` is
+the verdict-level confidence summary in [0, 1], clamped.
+
+**Canonical `score_components` vocabulary** — exported as
+`ScoreComponents` constants (and the `CANONICAL_SCORE_COMPONENTS`
+frozenset). Documented semantics live in `augur-schema 0.4.0`'s
+`step_trace.schema.json`:
+
+| Constant | Key | Semantic |
+|---|---|---|
+| `ScoreComponents.PROGRESS` | `"progress"` | Fraction of task completed; use per-step delta for shaping |
+| `ScoreComponents.ACTION_QUALITY` | `"action_quality"` | Step-local action sensibility |
+| `ScoreComponents.PROCESS_QUALITY` | `"process_quality"` | Trajectory-aware: fit with the overall plan |
+| `ScoreComponents.SAFETY_RISK` | `"safety_risk"` | 0 = safe, 1 = catastrophic |
+| `ScoreComponents.LOOPINESS` | `"loopiness"` | State-repetition penalty |
+| `ScoreComponents.VERIFIER_CONFIDENCE` | `"verifier_confidence"` | Verifier's confidence in this step |
+| `ScoreComponents.GROUNDING_ACCURACY` | `"grounding_accuracy"` | Did grounding target what the intent named |
+
+Producers MAY add custom keys for adapter-specific signals; consumers
+MUST tolerate extra keys (schema is `additionalProperties: true`).
+
 ### Sentry-for-CUA primitives (since 0.1.13)
 
 `set_step_versions(step_index, ...)` stamps version axes onto
@@ -682,6 +809,7 @@ All TypedDicts. Pass dicts directly to the SDK — no construction step.
 - `DiagnosticFinding` — output of the rules engine
 - `BundleManifest` — envelope returned by `session.close()`
 - `BundleTrace` — `{ session, steps[] }`
+- `TaskSpec`, `Subgoal`, `SuccessCondition`, `SubgoalCompletion` — RL training metadata (since 0.6.0)
 
 Enum types:
 - `CoordinateSpace = Literal["viewport_css_px", "device_px", "screenshot_px", "dom_client_rect"]`
