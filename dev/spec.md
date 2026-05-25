@@ -70,7 +70,8 @@ from augur_sdk import (
 `attach_observation`, `record_step`, `record_event`, `set_status`,
 `add_tag`, `set_capture_mode` (since 0.1.3), `append_log` (since 0.1.3),
 `attach_verifier` (since 0.1.5), `set_score` / `set_costs` /
-`set_step_costs` / `record_modelio` (since 0.1.8), `close`.
+`set_step_costs` / `record_modelio` (since 0.1.8),
+`record_step_iteration` (since 0.3.0), `close`.
 
 ### Models (`augur_sdk.models`)
 
@@ -156,6 +157,19 @@ is to ship a broken bundle).
 
 Every file in a bundle is at a path predictable from the step index
 (or constant for top-level files). See [docs/concepts/bundle-layout.md].
+
+Step files follow one of two layouts depending on iteration count
+(see §4.17):
+
+- **Single-emission** (canonical step only): `steps/<NNNN>.json`
+  (flat). Byte-identical with pre-0.3.0 bundles.
+- **With iterations** (canonical + ≥1 brain-loop iteration):
+  `steps/<NNNN>/<short_id>.json` for each iteration including the
+  canonical. `<short_id>` MUST be the first 8 hex chars of
+  `sha256(step_id)`. The directory itself counts as the canonical
+  step's slot, so `scan steps/ → canonical-step-count` (entries
+  whose stem is `<NNNN>`, file OR directory) remains the
+  authoritative way to count canonical steps in a bundle.
 
 ### 4.9 No side-effecting imports
 
@@ -307,6 +321,41 @@ The base MUST produce a bundle that passes `validate_bundle()` for
 every conforming subclass. Reference subclasses ship in separate
 user-org packages (`augur-adapter-openai-cua`,
 `augur-adapter-anthropic-cua`) to keep this SDK vendor-free.
+
+### 4.17 Step iterations (since 0.3.0)
+
+A canonical CUA step MAY have ≥1 brain-loop iterations underneath
+it. Iterations are addressable, per-emission `StepTrace` payloads
+that share their canonical's `step_index` but carry distinct
+`step_id`s.
+
+- `EventRecorder` keys steps by `step_id`. The first `step_id` to
+  land at a given `step_index` is the canonical step; subsequent
+  emissions with new `step_id`s are iterations. Re-recording under
+  an existing `step_id` is still last-write-wins.
+- `DebugSession.record_step_iteration(step_id_or_index,
+  iteration)` MUST append the iteration under the resolved
+  canonical step, atomically bump the canonical's
+  `step_iterations` counter (`len(iterations including
+  canonical)`), and raise `ValueError` if no canonical exists at
+  the resolved `step_index` or if the iteration's `step_id`
+  collides with the canonical's.
+- `DebugSession.record_step()` with a new `step_id` at an
+  existing `step_index` MUST emit a `DeprecationWarning` pointing
+  at `record_step_iteration()`. The call still succeeds and the
+  iteration is recorded — preserves working software for legacy
+  producers while signaling the migration.
+- `step_iterations` is OPTIONAL on `StepTrace`; consumers MUST
+  treat absence as `1`. Producers that don't distinguish
+  iterations MUST NOT emit the field, so single-emission bundles
+  stay byte-identical with pre-0.3.0.
+- Per §4.8, single-emission steps keep `steps/<NNNN>.json` and
+  steps with iterations move to `steps/<NNNN>/<short_id>.json`.
+- Streaming: each iteration fires a PUT to
+  `/runs/{run_id}/steps/{idx}` with the iteration payload, and a
+  follow-up PUT of the canonical step (now carrying the updated
+  `step_iterations` counter) so the live runs-list reflects the
+  new count without waiting for `close()`.
 
 ## 5. Version policy
 

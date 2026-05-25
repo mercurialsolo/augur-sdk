@@ -1256,6 +1256,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#417-step-iterations-since-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.17 Step iterations (since 0.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1626,6 +1637,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#417-step-iterations-since-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.17 Step iterations (since 0.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1748,7 +1770,8 @@ additive</strong> across minors post-1.0.</p>
 <code>attach_observation</code>, <code>record_step</code>, <code>record_event</code>, <code>set_status</code>,
 <code>add_tag</code>, <code>set_capture_mode</code> (since 0.1.3), <code>append_log</code> (since 0.1.3),
 <code>attach_verifier</code> (since 0.1.5), <code>set_score</code> / <code>set_costs</code> /
-<code>set_step_costs</code> / <code>record_modelio</code> (since 0.1.8), <code>close</code>.</p>
+<code>set_step_costs</code> / <code>record_modelio</code> (since 0.1.8),
+<code>record_step_iteration</code> (since 0.3.0), <code>close</code>.</p>
 <h3 id="models-augur_sdkmodels">Models (<code>augur_sdk.models</code>)<a class="headerlink" href="#models-augur_sdkmodels" title="Permanent link">&para;</a></h3>
 <p>Every record type the SDK accepts or produces is a <code>TypedDict</code>:</p>
 <ul>
@@ -1812,6 +1835,19 @@ is to ship a broken bundle).</p>
 <h3 id="48-path-stability">4.8 Path stability<a class="headerlink" href="#48-path-stability" title="Permanent link">&para;</a></h3>
 <p>Every file in a bundle is at a path predictable from the step index
 (or constant for top-level files). See [docs/concepts/bundle-layout.md].</p>
+<p>Step files follow one of two layouts depending on iteration count
+(see §4.17):</p>
+<ul>
+<li><strong>Single-emission</strong> (canonical step only): <code>steps/&lt;NNNN&gt;.json</code>
+  (flat). Byte-identical with pre-0.3.0 bundles.</li>
+<li><strong>With iterations</strong> (canonical + ≥1 brain-loop iteration):
+  <code>steps/&lt;NNNN&gt;/&lt;short_id&gt;.json</code> for each iteration including the
+  canonical. <code>&lt;short_id&gt;</code> MUST be the first 8 hex chars of
+  <code>sha256(step_id)</code>. The directory itself counts as the canonical
+  step's slot, so <code>scan steps/ → canonical-step-count</code> (entries
+  whose stem is <code>&lt;NNNN&gt;</code>, file OR directory) remains the
+  authoritative way to count canonical steps in a bundle.</li>
+</ul>
 <h3 id="49-no-side-effecting-imports">4.9 No side-effecting imports<a class="headerlink" href="#49-no-side-effecting-imports" title="Permanent link">&para;</a></h3>
 <p><code>import augur_sdk</code> MUST NOT open files, sockets, or threads. Side
 effects begin at <code>DebugSession(...)</code> construction (network heartbeat
@@ -1946,6 +1982,40 @@ step_index, kind)</code>; the default template is
 every conforming subclass. Reference subclasses ship in separate
 user-org packages (<code>augur-adapter-openai-cua</code>,
 <code>augur-adapter-anthropic-cua</code>) to keep this SDK vendor-free.</p>
+<h3 id="417-step-iterations-since-030">4.17 Step iterations (since 0.3.0)<a class="headerlink" href="#417-step-iterations-since-030" title="Permanent link">&para;</a></h3>
+<p>A canonical CUA step MAY have ≥1 brain-loop iterations underneath
+it. Iterations are addressable, per-emission <code>StepTrace</code> payloads
+that share their canonical's <code>step_index</code> but carry distinct
+<code>step_id</code>s.</p>
+<ul>
+<li><code>EventRecorder</code> keys steps by <code>step_id</code>. The first <code>step_id</code> to
+  land at a given <code>step_index</code> is the canonical step; subsequent
+  emissions with new <code>step_id</code>s are iterations. Re-recording under
+  an existing <code>step_id</code> is still last-write-wins.</li>
+<li><code>DebugSession.record_step_iteration(step_id_or_index,
+  iteration)</code> MUST append the iteration under the resolved
+  canonical step, atomically bump the canonical's
+  <code>step_iterations</code> counter (<code>len(iterations including
+  canonical)</code>), and raise <code>ValueError</code> if no canonical exists at
+  the resolved <code>step_index</code> or if the iteration's <code>step_id</code>
+  collides with the canonical's.</li>
+<li><code>DebugSession.record_step()</code> with a new <code>step_id</code> at an
+  existing <code>step_index</code> MUST emit a <code>DeprecationWarning</code> pointing
+  at <code>record_step_iteration()</code>. The call still succeeds and the
+  iteration is recorded — preserves working software for legacy
+  producers while signaling the migration.</li>
+<li><code>step_iterations</code> is OPTIONAL on <code>StepTrace</code>; consumers MUST
+  treat absence as <code>1</code>. Producers that don't distinguish
+  iterations MUST NOT emit the field, so single-emission bundles
+  stay byte-identical with pre-0.3.0.</li>
+<li>Per §4.8, single-emission steps keep <code>steps/&lt;NNNN&gt;.json</code> and
+  steps with iterations move to <code>steps/&lt;NNNN&gt;/&lt;short_id&gt;.json</code>.</li>
+<li>Streaming: each iteration fires a PUT to
+  <code>/runs/{run_id}/steps/{idx}</code> with the iteration payload, and a
+  follow-up PUT of the canonical step (now carrying the updated
+  <code>step_iterations</code> counter) so the live runs-list reflects the
+  new count without waiting for <code>close()</code>.</li>
+</ul>
 <h2 id="5-version-policy">5. Version policy<a class="headerlink" href="#5-version-policy" title="Permanent link">&para;</a></h2>
 <ul>
 <li>The SDK follows semver per <code>MAJOR.MINOR.PATCH</code>.</li>

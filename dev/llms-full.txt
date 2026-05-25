@@ -2653,7 +2653,8 @@ from augur_sdk import (
 `attach_observation`, `record_step`, `record_event`, `set_status`,
 `add_tag`, `set_capture_mode` (since 0.1.3), `append_log` (since 0.1.3),
 `attach_verifier` (since 0.1.5), `set_score` / `set_costs` /
-`set_step_costs` / `record_modelio` (since 0.1.8), `close`.
+`set_step_costs` / `record_modelio` (since 0.1.8),
+`record_step_iteration` (since 0.3.0), `close`.
 
 ### Models (`augur_sdk.models`)
 
@@ -2739,6 +2740,19 @@ is to ship a broken bundle).
 
 Every file in a bundle is at a path predictable from the step index
 (or constant for top-level files). See [docs/concepts/bundle-layout.md].
+
+Step files follow one of two layouts depending on iteration count
+(see §4.17):
+
+- **Single-emission** (canonical step only): `steps/<NNNN>.json`
+  (flat). Byte-identical with pre-0.3.0 bundles.
+- **With iterations** (canonical + ≥1 brain-loop iteration):
+  `steps/<NNNN>/<short_id>.json` for each iteration including the
+  canonical. `<short_id>` MUST be the first 8 hex chars of
+  `sha256(step_id)`. The directory itself counts as the canonical
+  step's slot, so `scan steps/ → canonical-step-count` (entries
+  whose stem is `<NNNN>`, file OR directory) remains the
+  authoritative way to count canonical steps in a bundle.
 
 ### 4.9 No side-effecting imports
 
@@ -2891,6 +2905,41 @@ every conforming subclass. Reference subclasses ship in separate
 user-org packages (`augur-adapter-openai-cua`,
 `augur-adapter-anthropic-cua`) to keep this SDK vendor-free.
 
+### 4.17 Step iterations (since 0.3.0)
+
+A canonical CUA step MAY have ≥1 brain-loop iterations underneath
+it. Iterations are addressable, per-emission `StepTrace` payloads
+that share their canonical's `step_index` but carry distinct
+`step_id`s.
+
+- `EventRecorder` keys steps by `step_id`. The first `step_id` to
+  land at a given `step_index` is the canonical step; subsequent
+  emissions with new `step_id`s are iterations. Re-recording under
+  an existing `step_id` is still last-write-wins.
+- `DebugSession.record_step_iteration(step_id_or_index,
+  iteration)` MUST append the iteration under the resolved
+  canonical step, atomically bump the canonical's
+  `step_iterations` counter (`len(iterations including
+  canonical)`), and raise `ValueError` if no canonical exists at
+  the resolved `step_index` or if the iteration's `step_id`
+  collides with the canonical's.
+- `DebugSession.record_step()` with a new `step_id` at an
+  existing `step_index` MUST emit a `DeprecationWarning` pointing
+  at `record_step_iteration()`. The call still succeeds and the
+  iteration is recorded — preserves working software for legacy
+  producers while signaling the migration.
+- `step_iterations` is OPTIONAL on `StepTrace`; consumers MUST
+  treat absence as `1`. Producers that don't distinguish
+  iterations MUST NOT emit the field, so single-emission bundles
+  stay byte-identical with pre-0.3.0.
+- Per §4.8, single-emission steps keep `steps/<NNNN>.json` and
+  steps with iterations move to `steps/<NNNN>/<short_id>.json`.
+- Streaming: each iteration fires a PUT to
+  `/runs/{run_id}/steps/{idx}` with the iteration payload, and a
+  follow-up PUT of the canonical step (now carrying the updated
+  `step_iterations` counter) so the live runs-list reflects the
+  new count without waiting for `close()`.
+
 ## 5. Version policy
 
 - The SDK follows semver per `MAJOR.MINOR.PATCH`.
@@ -2938,6 +2987,74 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 `docs/versioning.md` upstream (`MAJOR.MINOR.PATCH`; pre-1.0 minors may break).
 
 ## [Unreleased]
+
+## [0.3.0] — 2026-05-24
+
+### Step-iteration semantics (closes #30, #31)
+
+Brain-loop iterations under a canonical CUA step are now first-class.
+Producers can emit `N` canonical steps with `M` total iterations and
+consumers (Augur viewer runs-list, OTel export, CSV dumps) render
+`"N (M)"` without crawling decision events.
+
+- **Schema bump to `augur-schema 0.3.2`.** `step_trace.schema.json`
+  gains an optional `step_iterations: int` field (minimum 1, default
+  semantics when absent: 1). Additive; every prior 0.1.x / 0.2.x
+  bundle continues to validate.
+- **`EventRecorder` keyed by `step_id`** (closes #30). Multiple
+  `record_step()` emissions sharing a `step_index` no longer collapse
+  into one in-memory slot. The first `step_id` to land for a given
+  `step_index` is the canonical step; subsequent emissions with new
+  `step_id`s are iterations and live alongside it. Re-recording under
+  an existing `step_id` is still last-write-wins (the common
+  `running` → `succeeded` update path).
+- **Bundle path layout follows the keying.** Single-emission steps
+  keep the flat `steps/<NNNN>.json` path (byte-identical with
+  pre-0.3.0 bundles). Steps with iterations move to
+  `steps/<NNNN>/<short_id>.json` for each iteration including the
+  canonical — `<short_id>` is the first 8 hex chars of
+  `sha256(step_id)`, deterministic and filesystem-safe. The
+  `scan steps/ → canonical-step-count` invariant the Augur server's
+  live aggregator relies on is preserved (one entry per
+  canonical step, file *or* directory).
+- **`DebugSession.record_step_iteration(step_id_or_index, iteration)`**
+  (closes #31). Producer-side helper that appends an iteration under
+  an existing canonical step and atomically bumps the canonical's
+  `step_iterations` counter. The canonical reference accepts either
+  a `step_id` (for explicit linkage) or a `step_index` (for
+  Mantis-style loops that always share the canonical slot). Each
+  iteration MUST carry a distinct `step_id`.
+- **`record_step()` for an existing `step_index` with a new `step_id`
+  now emits a `DeprecationWarning`** pointing at
+  `record_step_iteration()`. The call still succeeds and the
+  iteration is recorded — preserves working-software for legacy
+  producers while signaling the migration.
+- **`validate_bundle()`** walks both layouts via `rglob("*.json")`
+  so a bundle with iterations validates the same way as a flat one.
+- **Streaming.** Each iteration fires a PUT to
+  `/runs/{run_id}/steps/{idx}` with the iteration's payload AND a
+  follow-up PUT of the canonical step (now carrying the updated
+  `step_iterations` counter), so the live runs-list reflects the
+  new count without waiting for `close()`.
+
+### Tests
+
+- `tests/test_step_iterations.py` (9 tests) — single-emission keeps
+  flat layout, same-step_id update is idempotent, distinct
+  step_ids emit two on-disk files under the canonical-step dir and
+  warn, `record_step_iteration` bumps the counter, accepts
+  canonical step_id, refuses without a canonical or on id
+  collision, no warning for new step_index, and manifest
+  signatures cover iteration paths. Full suite: 223 tests, all
+  green.
+
+### Downstream consumer status
+
+The Augur server already reads `step_iterations` when present and
+bubbles `iteration_count` to the runs-list API. Viewer renders `N`
+when iterations == steps and `N (M)` when iterations > steps. Both
+ship behind the absence-tolerant default, so this SDK change lands
+without consumer coordination.
 
 ## [0.2.2] — 2026-05-23
 
