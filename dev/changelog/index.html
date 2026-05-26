@@ -1052,6 +1052,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#061-2026-05-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.6.1] — 2026-05-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.6.1] — 2026-05-25">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#admit-augur-schema-050-060-closes-44" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admit augur-schema 0.5.0 + 0.6.0 (closes #44)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#060-2026-05-25" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2005,6 +2033,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#061-2026-05-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.6.1] — 2026-05-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.6.1] — 2026-05-25">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#admit-augur-schema-050-060-closes-44" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admit augur-schema 0.5.0 + 0.6.0 (closes #44)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#060-2026-05-25" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2942,6 +2998,27 @@
 <a href="https://keepachangelog.com/">Keep a Changelog</a>, with semver applied per
 <code>docs/versioning.md</code> upstream (<code>MAJOR.MINOR.PATCH</code>; pre-1.0 minors may break).</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="061-2026-05-25">[0.6.1] — 2026-05-25<a class="headerlink" href="#061-2026-05-25" title="Permanent link">&para;</a></h2>
+<h3 id="admit-augur-schema-050-060-closes-44">Admit augur-schema 0.5.0 + 0.6.0 (closes #44)<a class="headerlink" href="#admit-augur-schema-050-060-closes-44" title="Permanent link">&para;</a></h3>
+<p>Bump the <code>augur-schema</code> upper bound from <code>&lt;0.5</code> to <code>&lt;0.7</code> so consumers
+can install the SDK alongside the new server-side schemas:</p>
+<ul>
+<li><strong>augur-schema 0.5.0</strong> — adds <code>reward_aggregate.schema.json</code> (the
+  per-formula sidecar written by the new <code>POST /api/v1/runs/{id}/reward</code>
+  endpoint).</li>
+<li><strong>augur-schema 0.6.0</strong> — adds <code>trajectory_preference.schema.json</code> (the
+  pairwise-review records written by <code>POST /api/v1/preferences</code>).</li>
+</ul>
+<p>Both are additive, server-side <strong>outputs</strong> the SDK doesn't produce —
+the SDK just needs to not block consumers that want to install the
+newer schema package in the same env (e.g. an RL trainer hitting both
+the run-sampling endpoints and the SDK-driven worker bundles). No
+producer-side behavior change; every shape the SDK does validate
+against (manifest, debug_session, step_trace, modelio, side_effect,
+branch_context, captured_versions, task_spec, subgoal, outcome_record,
+judge_decision, env_fingerprint, preference, observation) is unchanged
+in 0.5.0 / 0.6.0.</p>
+<p>Full suite 277 green under augur-schema 0.6.0; no SDK code touched.</p>
 <h2 id="060-2026-05-25">[0.6.0] — 2026-05-25<a class="headerlink" href="#060-2026-05-25" title="Permanent link">&para;</a></h2>
 <h3 id="producer-support-for-augur-schema-040-rl-training-metadata-closes-41">Producer support for augur-schema 0.4.0 — RL training metadata (closes #41)<a class="headerlink" href="#producer-support-for-augur-schema-040-rl-training-metadata-closes-41" title="Permanent link">&para;</a></h3>
 <p><code>augur-schema 0.4.1</code> adds the metadata that makes Augur a portable

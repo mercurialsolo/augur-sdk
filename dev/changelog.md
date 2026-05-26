@@ -6,6 +6,31 @@ All notable changes to `augur-sdk` are recorded here. Format roughly follows
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-05-25
+
+### Admit augur-schema 0.5.0 + 0.6.0 (closes #44)
+
+Bump the `augur-schema` upper bound from `<0.5` to `<0.7` so consumers
+can install the SDK alongside the new server-side schemas:
+
+- **augur-schema 0.5.0** — adds `reward_aggregate.schema.json` (the
+  per-formula sidecar written by the new `POST /api/v1/runs/{id}/reward`
+  endpoint).
+- **augur-schema 0.6.0** — adds `trajectory_preference.schema.json` (the
+  pairwise-review records written by `POST /api/v1/preferences`).
+
+Both are additive, server-side **outputs** the SDK doesn't produce —
+the SDK just needs to not block consumers that want to install the
+newer schema package in the same env (e.g. an RL trainer hitting both
+the run-sampling endpoints and the SDK-driven worker bundles). No
+producer-side behavior change; every shape the SDK does validate
+against (manifest, debug_session, step_trace, modelio, side_effect,
+branch_context, captured_versions, task_spec, subgoal, outcome_record,
+judge_decision, env_fingerprint, preference, observation) is unchanged
+in 0.5.0 / 0.6.0.
+
+Full suite 277 green under augur-schema 0.6.0; no SDK code touched.
+
 ## [0.6.0] — 2026-05-25
 
 ### Producer support for augur-schema 0.4.0 — RL training metadata (closes #41)
