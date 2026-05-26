@@ -1,0 +1,2154 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Instrument any screenshot-grounded computer-use agent (CUA) — local bundle writer + Sentry-style DSN streaming.">
+      
+      
+      
+        <link rel="canonical" href="https://mercurialsolo.github.io/augur-sdk/0.6.1/spec/">
+      
+      
+        <link rel="prev" href="../reference/adapter-authoring/">
+      
+      
+        <link rel="next" href="../changelog/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Spec - Augur SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#augur-sdk-normative-spec" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Augur SDK" class="md-header__button md-logo" aria-label="Augur SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Augur SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Spec
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/mercurialsolo/augur-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mercurialsolo/augur-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Augur SDK" class="md-nav__button md-logo" aria-label="Augur SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Augur SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/mercurialsolo/augur-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mercurialsolo/augur-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coding-agent-quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding-Agent Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/dsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DSN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/capture-modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capture Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/bundle-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bundle Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/redaction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redaction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/failure-class-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Failure-Class Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/trajectory-fingerprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trajectory Fingerprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/fanout-grouping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fanout Grouping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/python/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/mantis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mantis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/http-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/adapter-authoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Authoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-the-sdk-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What the SDK is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-cua-contract-preservation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. CUA contract preservation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-public-surface-the-supported-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Public surface (the supported API)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Public surface (the supported API)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-augur_sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level (augur_sdk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-augur_sdkmodels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models (augur_sdk.models)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics-augur_sdkdiagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics (augur_sdk.diagnostics)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#streaming-augur_sdkstreaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming (augur_sdk.streaming)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-behavioural-guarantees" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Behavioural guarantees
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Behavioural guarantees">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-bundle-writes-are-atomic-per-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Bundle writes are atomic per file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-the-bundle-is-always-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 The bundle is always written
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-streaming-failures-are-never-fatal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Streaming failures are never fatal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-heartbeat-cadence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Heartbeat cadence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-no-reads-from-the-server-during-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 No reads from the server during a run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-redaction-runs-before-bytes-leave-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Redaction runs before bytes leave the SDK
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#47-schema-validation-on-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.7 Schema validation on close
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#48-path-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.8 Path stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#49-no-side-effecting-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.9 No side-effecting imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#410-thread-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.10 Thread safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#411-mid-run-capture-mode-override-since-013" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.11 Mid-run capture-mode override (since 0.1.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#412-append_log-is-streaming-only-since-013" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.12 append_log is streaming-only (since 0.1.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#413-attach_verifier-post-hoc-verdict-since-015" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.13 attach_verifier post-hoc verdict (since 0.1.5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#414-training-data-substrate-schemas-since-016" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.14 Training-data substrate schemas (since 0.1.6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#416-training-data-producer-side-helpers-since-018" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.16 Training-data producer-side helpers (since 0.1.8)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#415-modelapiadapterbase-scaffolding-since-017" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.15 ModelApiAdapterBase scaffolding (since 0.1.7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#417-step-iterations-since-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.17 Step iterations (since 0.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-version-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Version policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-non-goals-dont-ask-the-sdk-for-these" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Non-goals (don't ask the SDK for these)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-the-sdk-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What the SDK is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-cua-contract-preservation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. CUA contract preservation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-public-surface-the-supported-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Public surface (the supported API)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Public surface (the supported API)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-augur_sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level (augur_sdk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-augur_sdkmodels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models (augur_sdk.models)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics-augur_sdkdiagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics (augur_sdk.diagnostics)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#streaming-augur_sdkstreaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming (augur_sdk.streaming)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-behavioural-guarantees" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Behavioural guarantees
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Behavioural guarantees">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-bundle-writes-are-atomic-per-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Bundle writes are atomic per file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-the-bundle-is-always-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 The bundle is always written
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-streaming-failures-are-never-fatal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Streaming failures are never fatal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-heartbeat-cadence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Heartbeat cadence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-no-reads-from-the-server-during-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 No reads from the server during a run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-redaction-runs-before-bytes-leave-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Redaction runs before bytes leave the SDK
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#47-schema-validation-on-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.7 Schema validation on close
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#48-path-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.8 Path stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#49-no-side-effecting-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.9 No side-effecting imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#410-thread-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.10 Thread safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#411-mid-run-capture-mode-override-since-013" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.11 Mid-run capture-mode override (since 0.1.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#412-append_log-is-streaming-only-since-013" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.12 append_log is streaming-only (since 0.1.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#413-attach_verifier-post-hoc-verdict-since-015" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.13 attach_verifier post-hoc verdict (since 0.1.5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#414-training-data-substrate-schemas-since-016" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.14 Training-data substrate schemas (since 0.1.6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#416-training-data-producer-side-helpers-since-018" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.16 Training-data producer-side helpers (since 0.1.8)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#415-modelapiadapterbase-scaffolding-since-017" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.15 ModelApiAdapterBase scaffolding (since 0.1.7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#417-step-iterations-since-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.17 Step iterations (since 0.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-version-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Version policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-non-goals-dont-ask-the-sdk-for-these" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Non-goals (don't ask the SDK for these)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/mercurialsolo/augur-sdk/edit/main/docs/spec.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="augur-sdk-normative-spec">augur-sdk — normative spec<a class="headerlink" href="#augur-sdk-normative-spec" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Draft, v0.1.
+<strong>Audience:</strong> Implementers of the Augur SDK and anyone integrating a
+CUA with it.
+<strong>Purpose:</strong> Pin down the contract the SDK exposes — public surface,
+behavioural guarantees, and version boundaries — so coding agents,
+framework owners, and downstream tools can rely on it without reading
+the source.</p>
+<p>This document uses RFC-2119 keywords (<code>MUST</code>, <code>SHOULD</code>, <code>MAY</code>).</p>
+<p>The umbrella product spec (architecture, the full debugger surface,
+non-goals) is maintained alongside the hosted Augur service and is not
+publicly mirrored. This file is the <strong>SDK-only slice</strong> — the contract
+the public client exposes.</p>
+<hr />
+<h2 id="1-what-the-sdk-is">1. What the SDK is<a class="headerlink" href="#1-what-the-sdk-is" title="Permanent link">&para;</a></h2>
+<p>A Python library that an authoring CUA imports to:</p>
+<ol>
+<li><strong>Capture</strong> a per-run trace at a configurable level of detail.</li>
+<li><strong>Redact</strong> sensitive material before it lands on disk or hits the network.</li>
+<li><strong>Bundle</strong> captured records onto disk in a path-stable, schema-validated
+   layout.</li>
+<li><strong>Stream</strong> captured records to an Augur server (Sentry-style DSN),
+   when configured. Streaming is observe-only on top of (1)–(3) — the
+   local bundle is the canonical artefact; the network sink is an
+   optimisation.</li>
+</ol>
+<p>The SDK does <strong>NOT</strong>:</p>
+<ul>
+<li>Provide a UI (that's the Augur viewer, upstream).</li>
+<li>Provide a CLI (that's <code>augur-cli</code>, upstream).</li>
+<li>Make decisions for the CUA. The SDK never reads back from the server
+  during a run to influence the agent's behaviour. (See §6.)</li>
+</ul>
+<h2 id="2-cua-contract-preservation">2. CUA contract preservation<a class="headerlink" href="#2-cua-contract-preservation" title="Permanent link">&para;</a></h2>
+<p>The SDK MUST NOT promote DOM-derived coordinates to runtime inputs. Per
+the umbrella spec §4, <strong>runtime action selection is screenshot-grounded.</strong>
+Adapters MAY emit DOM/CDP records as <code>provenance: "dom"</code> for diagnostic
+evidence, but the SDK will not interpret them as the agent's real
+target. The diagnostic-rules engine (<code>augur_sdk.diagnostics</code>) flags any
+rule that treats a non-<code>screenshot</code> provenance as a runtime input.</p>
+<h2 id="3-public-surface-the-supported-api">3. Public surface (the supported API)<a class="headerlink" href="#3-public-surface-the-supported-api" title="Permanent link">&para;</a></h2>
+<p>These are the symbols the SDK considers public. Stable across patch
+versions; <strong>may break</strong> across minor versions while pre-1.0; <strong>strictly
+additive</strong> across minors post-1.0.</p>
+<h3 id="top-level-augur_sdk">Top-level (<code>augur_sdk</code>)<a class="headerlink" href="#top-level-augur_sdk" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">augur_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">DebugSession</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">CaptureMode</span><span class="p">,</span> <span class="n">resolve_capture_mode</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">DefaultRedactionPolicy</span><span class="p">,</span> <span class="n">RedactionPolicy</span><span class="p">,</span> <span class="n">DEFAULT_POLICY_ID</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">LocalFSStore</span><span class="p">,</span> <span class="n">S3Store</span><span class="p">,</span> <span class="n">Store</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">Adapter</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">ModelApiAdapterBase</span><span class="p">,</span>  <span class="c1"># since 0.1.7</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">SUPPORTED_SCHEMA_RANGE</span><span class="p">,</span> <span class="n">__version__</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
+</span></code></pre></div>
+<p><code>DebugSession</code> public methods:
+<code>attach_observation</code>, <code>record_step</code>, <code>record_event</code>, <code>set_status</code>,
+<code>add_tag</code>, <code>set_capture_mode</code> (since 0.1.3), <code>append_log</code> (since 0.1.3),
+<code>attach_verifier</code> (since 0.1.5), <code>set_score</code> / <code>set_costs</code> /
+<code>set_step_costs</code> / <code>record_modelio</code> (since 0.1.8),
+<code>record_step_iteration</code> (since 0.3.0), <code>close</code>.</p>
+<h3 id="models-augur_sdkmodels">Models (<code>augur_sdk.models</code>)<a class="headerlink" href="#models-augur_sdkmodels" title="Permanent link">&para;</a></h3>
+<p>Every record type the SDK accepts or produces is a <code>TypedDict</code>:</p>
+<ul>
+<li><code>DebugSession</code>, <code>StepTrace</code>, <code>Observation</code>, <code>DecisionEvent</code>,
+  <code>ReplayFixture</code>, <code>DiagnosticFinding</code>, <code>BundleManifest</code>, <code>BundleTrace</code>.</li>
+</ul>
+<p>Enum types are <code>Literal</code>s — implementers can use them at the boundary
+without runtime imports.</p>
+<h3 id="diagnostics-augur_sdkdiagnostics">Diagnostics (<code>augur_sdk.diagnostics</code>)<a class="headerlink" href="#diagnostics-augur_sdkdiagnostics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>BundleContext</code>, <code>Rule</code>, <code>RuleResult</code>, <code>RulesEngine</code></li>
+<li><code>load_pack(name: str) -&gt; list[Rule]</code></li>
+<li><code>rule(rule_id: str, *, severity: str = "medium")</code> decorator</li>
+<li><code>CUA_RULES</code> — the generic rule pack</li>
+</ul>
+<h3 id="streaming-augur_sdkstreaming">Streaming (<code>augur_sdk.streaming</code>)<a class="headerlink" href="#streaming-augur_sdkstreaming" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>DSN</code> — parser</li>
+<li><code>StreamingSink</code> — best-effort POSTs</li>
+</ul>
+<p>Anything not listed here is <strong>private</strong>. Names starting with <code>_</code> are
+private regardless.</p>
+<h2 id="4-behavioural-guarantees">4. Behavioural guarantees<a class="headerlink" href="#4-behavioural-guarantees" title="Permanent link">&para;</a></h2>
+<p>The SDK MUST behave as follows. These are the only invariants downstream
+consumers may rely on.</p>
+<h3 id="41-bundle-writes-are-atomic-per-file">4.1 Bundle writes are atomic per file<a class="headerlink" href="#41-bundle-writes-are-atomic-per-file" title="Permanent link">&para;</a></h3>
+<p>Every file in a bundle is written via <code>&lt;file&gt;.tmp</code> + <code>os.replace</code>. A
+reader observing the bundle mid-run never sees a partial file.</p>
+<h3 id="42-the-bundle-is-always-written">4.2 The bundle is always written<a class="headerlink" href="#42-the-bundle-is-always-written" title="Permanent link">&para;</a></h3>
+<p>If <code>capture_mode != "off"</code>, the bundle is written to <code>out_dir</code> even when:
+- Streaming is disabled.
+- The network is unreachable.
+- The DSN's <code>api_key</code> is rejected.
+- The Augur server returns 4xx/5xx.</p>
+<p>The bundle is the source of truth; streaming is observe-only.</p>
+<h3 id="43-streaming-failures-are-never-fatal">4.3 Streaming failures are never fatal<a class="headerlink" href="#43-streaming-failures-are-never-fatal" title="Permanent link">&para;</a></h3>
+<p>The SDK MUST NOT raise on network errors. The streaming sink runs on
+background threads and logs failures at DEBUG; never WARN or higher.
+This means an instrumented CUA cannot be made to crash by toggling a
+firewall rule.</p>
+<h3 id="44-heartbeat-cadence">4.4 Heartbeat cadence<a class="headerlink" href="#44-heartbeat-cadence" title="Permanent link">&para;</a></h3>
+<p>When <code>dsn</code> is configured, the SDK MUST emit one initial
+<code>session_opened</code> heartbeat as soon as the <code>StreamingSink</code> is constructed
+(i.e. on <code>DebugSession(dsn=…)</code>), so the server's connection list shows
+the client before any step has been recorded. While the session is
+open, the SDK then heartbeats at intervals of <strong>15 seconds ± 1 s</strong>.
+Operators set the server's heartbeat window via
+<code>AUGUR_HEARTBEAT_WINDOW_S</code> (default 60 s).</p>
+<h3 id="45-no-reads-from-the-server-during-a-run">4.5 No reads from the server during a run<a class="headerlink" href="#45-no-reads-from-the-server-during-a-run" title="Permanent link">&para;</a></h3>
+<p>The SDK MUST NOT issue HTTP <code>GET</code> against the Augur server while a
+session is open. Live attach (Phase 4) introduces SSE/WS reads in a
+viewer-side path; the SDK side stays write-only.</p>
+<h3 id="46-redaction-runs-before-bytes-leave-the-sdk">4.6 Redaction runs before bytes leave the SDK<a class="headerlink" href="#46-redaction-runs-before-bytes-leave-the-sdk" title="Permanent link">&para;</a></h3>
+<p>Both local bundle writes and streaming POSTs run through the active
+<code>RedactionPolicy</code> before serialization. There is no opt-out path.</p>
+<h3 id="47-schema-validation-on-close">4.7 Schema validation on close<a class="headerlink" href="#47-schema-validation-on-close" title="Permanent link">&para;</a></h3>
+<p><code>session.close()</code> MUST validate every record against the canonical
+schemas under <code>augur_sdk._schema/json/</code>. Validation failure raises;
+this is the one place the SDK is allowed to be loud (the alternative
+is to ship a broken bundle).</p>
+<h3 id="48-path-stability">4.8 Path stability<a class="headerlink" href="#48-path-stability" title="Permanent link">&para;</a></h3>
+<p>Every file in a bundle is at a path predictable from the step index
+(or constant for top-level files). See [docs/concepts/bundle-layout.md].</p>
+<p>Step files follow one of two layouts depending on iteration count
+(see §4.17):</p>
+<ul>
+<li><strong>Single-emission</strong> (canonical step only): <code>steps/&lt;NNNN&gt;.json</code>
+  (flat). Byte-identical with pre-0.3.0 bundles.</li>
+<li><strong>With iterations</strong> (canonical + ≥1 brain-loop iteration):
+  <code>steps/&lt;NNNN&gt;/&lt;short_id&gt;.json</code> for each iteration including the
+  canonical. <code>&lt;short_id&gt;</code> MUST be the first 8 hex chars of
+  <code>sha256(step_id)</code>. The directory itself counts as the canonical
+  step's slot, so <code>scan steps/ → canonical-step-count</code> (entries
+  whose stem is <code>&lt;NNNN&gt;</code>, file OR directory) remains the
+  authoritative way to count canonical steps in a bundle.</li>
+</ul>
+<h3 id="49-no-side-effecting-imports">4.9 No side-effecting imports<a class="headerlink" href="#49-no-side-effecting-imports" title="Permanent link">&para;</a></h3>
+<p><code>import augur_sdk</code> MUST NOT open files, sockets, or threads. Side
+effects begin at <code>DebugSession(...)</code> construction (network heartbeat
+and thread spawn, when <code>dsn</code> is set) and at <code>DebugSession.__enter__</code>
+(bundle directory creation, periodic heartbeat loop).</p>
+<h3 id="410-thread-safety">4.10 Thread safety<a class="headerlink" href="#410-thread-safety" title="Permanent link">&para;</a></h3>
+<p><code>DebugSession.record_step</code>, <code>record_event</code>, and <code>attach_observation</code>
+MUST be safe to call from multiple threads on the same session. The SDK
+uses an internal <code>threading.Lock</code> around the <code>EventRecorder</code>.</p>
+<h3 id="411-mid-run-capture-mode-override-since-013">4.11 Mid-run capture-mode override (since 0.1.3)<a class="headerlink" href="#411-mid-run-capture-mode-override-since-013" title="Permanent link">&para;</a></h3>
+<p><code>DebugSession.set_capture_mode(mode)</code> MUST NOT mutate the manifest's
+<code>capture_mode</code>. Instead, every subsequent <code>record_step</code> gets an
+explicit <code>capture_mode</code> field stamped on the StepTrace, per the
+optional field on <code>step_trace.schema.json</code>. A <code>capture_mode</code> already
+present on the StepTrace passed by the caller MUST NOT be overwritten.
+The override persists for the rest of the session unless changed again
+by another <code>set_capture_mode</code> call.</p>
+<h3 id="412-append_log-is-streaming-only-since-013">4.12 <code>append_log</code> is streaming-only (since 0.1.3)<a class="headerlink" href="#412-append_log-is-streaming-only-since-013" title="Permanent link">&para;</a></h3>
+<p><code>DebugSession.append_log(text, …)</code> MUST be a no-op when streaming is
+disabled — the bundle on disk is the source of truth for local logs,
+and producers that want them write to <code>logs/</code> directly via the
+configured <code>Store</code>. With streaming enabled, the SDK POSTs to
+<code>/api/v1/runs/&lt;run_id&gt;/logs</code> with a JSON body; the server routes the
+chunk to <code>logs/&lt;name&gt;.log</code> (or <code>logs/step-&lt;idx&gt;.log</code> when
+<code>step_index</code> is set).</p>
+<h3 id="413-attach_verifier-post-hoc-verdict-since-015">4.13 <code>attach_verifier</code> post-hoc verdict (since 0.1.5)<a class="headerlink" href="#413-attach_verifier-post-hoc-verdict-since-015" title="Permanent link">&para;</a></h3>
+<p><code>DebugSession.attach_verifier(step_index, status=…, …)</code> MUST replace
+the target step's <code>verdict</code> field in-place. The previous verdict is
+discarded — precedence is documented as
+<code>native verdict &gt; attach_verifier &gt; inferred default</code>, i.e. an
+external harness opting in to <code>attach_verifier</code> is asserting authority
+over the producer's classification. When streaming is enabled, the
+SDK MUST echo the patched step through the live sink (so viewers see
+the updated verdict without waiting for <code>close()</code>); when streaming is
+off, the patched verdict is written to disk on <code>close()</code>. Raises
+<code>ValueError</code> if no step exists at <code>step_index</code>.</p>
+<h3 id="414-training-data-substrate-schemas-since-016">4.14 Training-data substrate schemas (since 0.1.6)<a class="headerlink" href="#414-training-data-substrate-schemas-since-016" title="Permanent link">&para;</a></h3>
+<p>The vendored JSON Schemas gain four additive surfaces so a single
+bundle can serve both debugging and SFT/DPO/RL training pipelines:</p>
+<ul>
+<li><code>modelio.schema.json</code> (new short name <code>modelio</code>): canonical
+  one-model-call record (<code>request</code>, <code>response</code>, <code>usage</code>,
+  <code>prompt_hash</code>, …). Producers MUST write these under
+  <code>&lt;bundle&gt;/modelio/&lt;step_index:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json</code> when
+  <code>capture_mode</code> is <code>model_io</code> or <code>full</code>; lower modes MAY omit the
+  directory entirely.</li>
+<li><code>step_trace.costs</code> + <code>step_trace.latency</code> (optional): per-step
+  token counts, USD breakdown, and per-layer wall-clock.</li>
+<li><code>debug_session.costs</code> (optional): session-level rollup of the above.</li>
+<li><code>verdict.{score, score_components, comparator}</code> (optional):
+  continuous reward signal (0..1) alongside the categorical
+  <code>status</code>. Default mapping when <code>score</code> is absent:
+  <code>passed → 1.0</code>, <code>recoverable → 0.5</code>, <code>failed|skipped|unknown → 0.0</code>.</li>
+<li><code>preference.schema.json</code> (new short name <code>preference</code>): DPO /
+  RLHF preference record stored at
+  <code>&lt;bundle&gt;/preferences/&lt;step_index:04d&gt;.json</code>. Decoupled from
+  the immutable trace so raters MAY add comparisons after the
+  run completes; the schema requires <code>preferred_action</code> +
+  <code>alternatives[]</code> (each with an <code>action</code> and optional
+  <code>reward_estimate</code>) and accepts a <code>comparator</code> of
+  <code>verifier | model-judge | human-rater | replay-diff</code>.</li>
+<li><code>prior_steps.schema.json</code> (new short name <code>prior_steps</code>, since
+  0.1.9): sibling of <code>replay_fixture</code> written to
+  <code>&lt;bundle&gt;/replay/&lt;step_index:04d&gt;.prior.json</code> when a fixture's
+  <code>prior_steps</code> is non-null. Compact list of the steps that
+  preceded the fixture's target — intentionally a thin subset of
+  <code>step_trace</code> (action + verdict + intent only) so the replay
+  agent sees the same context the original run had without
+  inheriting observations/costs. Resolves a gap surfaced during
+  the upstream augur#55 v1.0 freeze review.</li>
+</ul>
+<p>Every field is additive and optional; all 0.1.x bundles produced by
+prior SDK versions continue to validate. Producer-side helpers
+(<code>attach_costs</code>, <code>attach_score</code>, <code>record_modelio</code>) ship in 0.2.0;
+until then, adapters MAY populate the new fields directly on the
+<code>StepTrace</code> dict they pass to <code>record_step()</code>.</p>
+<h3 id="416-training-data-producer-side-helpers-since-018">4.16 Training-data producer-side helpers (since 0.1.8)<a class="headerlink" href="#416-training-data-producer-side-helpers-since-018" title="Permanent link">&para;</a></h3>
+<p>The 0.1.6 schema substrate (modelio, costs, verdict.score) gains
+producer-side SDK helpers so adapters don't have to mutate session
+internals to emit the new fields:</p>
+<ul>
+<li><code>DebugSession.set_costs(...)</code> and <code>set_step_costs(step_index, ...)</code>
+  MUST be merge-on-call (later kwargs win; unset dimensions are
+  preserved). <code>set_costs</code> surfaces on <strong>both</strong> the session record
+  and the manifest (<code>manifest.json#/costs</code>); <code>set_step_costs</code>
+  patches the step's <code>costs</code> object on disk. Since 0.3.1, <code>set_costs</code>
+  with at least one dimension set ALSO streams the full cumulative
+  dict via <code>PUT /api/v1/runs/{run_id}/costs</code> so the live runs-list
+  COST column reflects the producer's running total without waiting
+  for <code>close()</code> (#34). Server is idempotent last-write-wins;
+  <code>set_costs()</code> with no kwargs MUST NOT fire a PUT.</li>
+<li><code>DebugSession.set_score(step_index, score, *, comparator,
+  components)</code> MUST merge into the existing verdict (the
+  categorical <code>status</code> is preserved); <code>score</code> MUST be clamped to
+  <code>[0.0, 1.0]</code>; <code>comparator</code>, when set, MUST be one of
+  <code>verifier | model-judge | exact-match | human</code>. Default
+  status→score mapping for absent score remains the consumer's
+  responsibility (passed→1.0, recoverable→0.5, failed/skipped/
+  unknown→0.0).</li>
+<li><code>DebugSession.record_modelio(record, *, step_index, layer,
+  validate=True)</code> MUST validate <code>record</code> against
+  <code>modelio.schema.json</code> (Draft 2020-12) unless <code>validate=False</code>,
+  apply the session's <code>RedactionPolicy</code> before persistence (stamping
+  <code>redaction_applied: true</code>), and be <strong>idempotent on the record's
+  <code>prompt_hash</code></strong> — repeat calls with the same hash MUST return the
+  existing bundle-relative path without staging a duplicate file.
+  Path convention: <code>modelio/&lt;step_index:04d&gt;-&lt;layer&gt;-&lt;seq&gt;.json</code>
+  for step-scoped calls, <code>modelio/run-&lt;layer&gt;-&lt;seq&gt;.json</code> for
+  run-scoped (<code>step_index=None</code>); <code>&lt;seq&gt;</code> is a monotonic per-(step,
+  layer) counter starting at 0.</li>
+</ul>
+<p>Step → modelio linkage is <strong>path-based</strong>, not field-based:
+<code>step_trace.schema.json</code> carries no <code>modelio_refs</code> field. Consumers
+locate the model calls for step N by globbing <code>modelio/N*.json</code>.</p>
+<h3 id="415-modelapiadapterbase-scaffolding-since-017">4.15 <code>ModelApiAdapterBase</code> scaffolding (since 0.1.7)<a class="headerlink" href="#415-modelapiadapterbase-scaffolding-since-017" title="Permanent link">&para;</a></h3>
+<p><code>augur_sdk.ModelApiAdapterBase</code> is shared scaffolding for adapters
+whose native format is a message log (OpenAI Responses, Anthropic
+Messages, similar). The base provides
+<code>bundle_from_input(input_path, output_dir, *, screens_dir=None, run_id=None)</code>
+— the canonical entry point the <code>augur.adapters</code> group looks for —
+and resolves it through two subclass hooks:</p>
+<ul>
+<li><code>iter_tool_calls(messages) -&gt; Iterator[(turn_idx, tc_idx, action_dict)]</code>
+  (<strong>MUST</strong> override): walks the message log in dispatch order and
+  yields one canonical-shaped action per tool call.</li>
+<li><code>load_messages(path) -&gt; (messages, metadata)</code> (default reads a
+  single JSON file with <code>{"messages": [...], "metadata": {...}}</code>):
+  override for vendor-specific layouts (jsonl, split metadata, etc.).</li>
+</ul>
+<p>Sidecar screenshots are looked up via <code>find_screenshot(screens_dir,
+step_index, kind)</code>; the default template is
+<code>{step_index:04d}_{kind}.png</code>. Steps the base writes default to
+<code>status="succeeded"</code> with <code>verdict={"status": "unknown", "reason":
+"no native verifier"}</code> — external harnesses MAY refine this via
+<code>DebugSession.attach_verifier</code> (§4.13).</p>
+<p>The base MUST produce a bundle that passes <code>validate_bundle()</code> for
+every conforming subclass. Reference subclasses ship in separate
+user-org packages (<code>augur-adapter-openai-cua</code>,
+<code>augur-adapter-anthropic-cua</code>) to keep this SDK vendor-free.</p>
+<h3 id="417-step-iterations-since-030">4.17 Step iterations (since 0.3.0)<a class="headerlink" href="#417-step-iterations-since-030" title="Permanent link">&para;</a></h3>
+<p>A canonical CUA step MAY have ≥1 brain-loop iterations underneath
+it. Iterations are addressable, per-emission <code>StepTrace</code> payloads
+that share their canonical's <code>step_index</code> but carry distinct
+<code>step_id</code>s.</p>
+<ul>
+<li><code>EventRecorder</code> keys steps by <code>step_id</code>. The first <code>step_id</code> to
+  land at a given <code>step_index</code> is the canonical step; subsequent
+  emissions with new <code>step_id</code>s are iterations. Re-recording under
+  an existing <code>step_id</code> is still last-write-wins.</li>
+<li><code>DebugSession.record_step_iteration(step_id_or_index,
+  iteration)</code> MUST append the iteration under the resolved
+  canonical step, atomically bump the canonical's
+  <code>step_iterations</code> counter (<code>len(iterations including
+  canonical)</code>), and raise <code>ValueError</code> if no canonical exists at
+  the resolved <code>step_index</code> or if the iteration's <code>step_id</code>
+  collides with the canonical's.</li>
+<li><code>DebugSession.record_step()</code> with a new <code>step_id</code> at an
+  existing <code>step_index</code> MUST emit a <code>DeprecationWarning</code> pointing
+  at <code>record_step_iteration()</code>. The call still succeeds and the
+  iteration is recorded — preserves working software for legacy
+  producers while signaling the migration.</li>
+<li><code>step_iterations</code> is OPTIONAL on <code>StepTrace</code>; consumers MUST
+  treat absence as <code>1</code>. Producers that don't distinguish
+  iterations MUST NOT emit the field, so single-emission bundles
+  stay byte-identical with pre-0.3.0.</li>
+<li>Per §4.8, single-emission steps keep <code>steps/&lt;NNNN&gt;.json</code> and
+  steps with iterations move to <code>steps/&lt;NNNN&gt;/&lt;short_id&gt;.json</code>.</li>
+<li>Streaming: each iteration fires a PUT to
+  <code>/runs/{run_id}/steps/{idx}</code> with the iteration payload, and a
+  follow-up PUT of the canonical step (now carrying the updated
+  <code>step_iterations</code> counter) so the live runs-list reflects the
+  new count without waiting for <code>close()</code>.</li>
+</ul>
+<h2 id="5-version-policy">5. Version policy<a class="headerlink" href="#5-version-policy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The SDK follows semver per <code>MAJOR.MINOR.PATCH</code>.</li>
+<li>Pre-1.0: minors MAY break public surface but MUST ship a migration
+  note in <code>CHANGELOG.md</code>.</li>
+<li>Post-1.0: minors are strictly additive; only majors break.</li>
+<li><code>__version__</code> and <code>SUPPORTED_SCHEMA_RANGE</code> are introspectable at runtime.</li>
+<li><code>SUPPORTED_SCHEMA_RANGE</code> tracks the JSON Schema <strong>content</strong> version
+  (the <code>$id</code> segment, e.g. <code>0.1</code> in
+  <code>.../schemas/0.1/step_trace.schema.json</code>), <strong>not</strong> the <code>augur-schema</code>
+  PyPI package version. The schemas themselves live in the
+  <a href="https://pypi.org/project/augur-schema/"><code>augur-schema</code></a> dep — see
+  the dep-migration note in CHANGELOG 0.2.0. Additive fields in the
+  dep (e.g. <code>step_iterations</code>, added in <code>augur-schema 0.3.2</code>) keep
+  the content version at <code>0.1</code>; only a structural break bumps the
+  range here.</li>
+</ul>
+<h2 id="6-non-goals-dont-ask-the-sdk-for-these">6. Non-goals (don't ask the SDK for these)<a class="headerlink" href="#6-non-goals-dont-ask-the-sdk-for-these" title="Permanent link">&para;</a></h2>
+<p>The SDK does not:</p>
+<ul>
+<li>Render the UI (use the Augur viewer, upstream).</li>
+<li>Provide a CLI (use <code>augur-cli</code>, upstream).</li>
+<li>Implement an HTTP server (use <code>augur-server</code>, upstream).</li>
+<li>Manage tenants, users, or DSNs (those are operator concerns; mint
+  DSNs via <code>augur admin dsn-issue</code> upstream).</li>
+<li>Run a coding agent (use Claude Code / Cursor; this SDK produces the
+  bundle they read).</li>
+<li>Schedule, retry, or replay runs (those are framework concerns).</li>
+<li>Validate adapter code (see the contract test suite upstream).</li>
+</ul>
+<h2 id="7-status">7. Status<a class="headerlink" href="#7-status" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Schema version</strong>: <code>0.1</code></li>
+<li><strong>SDK version</strong>: <code>0.1.9</code></li>
+<li><strong>Supported Python</strong>: 3.11, 3.12, 3.13</li>
+<li><strong>Runtime deps</strong>: <code>jsonschema</code>, <code>referencing</code>, <code>urllib3</code></li>
+</ul>
+<p>Anything beyond <code>0.1.x</code> may break this spec; check <code>CHANGELOG.md</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.expand", "content.code.copy", "content.code.annotate", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
